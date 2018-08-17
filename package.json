@@ -27,7 +27,7 @@
     "secure"
   ],
   "dependencies": {
-    "lodash": "4.13.1",
+    "lodash": "4.17.10",
     "minimist": "1.2.0",
     "socketcluster-server": "13.1.5"
   }

@@ -1,3 +1,5 @@
+//SC V 6.1.0
+
 const _ = require('lodash');
 const argv = require('minimist')(process.argv.slice(2));
 const http = require('http');
@@ -210,10 +212,6 @@ scServer.on('connection', function (socket) {
     logInfo(`The scc-broker instance ${data.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} joined the cluster on socket ${socket.id}`);
   });
 
-  socket.on('sccBrokerLeaveCluster', function (respond) {
-    sccBrokerLeaveCluster(socket, respond);
-  });
-
   socket.on('sccWorkerJoinCluster', function (data, respond) {
     socket.instanceId = data.instanceId;
     socket.instanceIp = getRemoteIp(socket, data);
@@ -248,11 +246,15 @@ scServer.on('connection', function (socket) {
       logInfo(`The zation-master instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
   });
 
-  socket.on('sccWorkerLeaveCluster', function (respond) {
+  socket.on('sccBrokerLeaveCluster', function (data,respond) {
+      sccBrokerLeaveCluster(socket, respond);
+  });
+
+  socket.on('sccWorkerLeaveCluster', function (data,respond) {
     sccWorkerLeaveCluster(socket, respond);
   });
 
-  socket.on('zationMasterLeaveCluster', function (respond) {
+  socket.on('zationMasterLeaveCluster', function (data,respond) {
       zMasterLeaveCluster(socket, respond);
   });
 
@@ -266,7 +268,7 @@ scServer.on('connection', function (socket) {
     }
   });
 
-  socket.on('getSyncData', function (respond) {
+  socket.on('getSyncData', function (d,respond) {
     if(!zmLeaderSocketId) {
       respond(null,{haveLeader : false});
     }
