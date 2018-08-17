@@ -293,6 +293,7 @@ const getRandomZMaster = function ()
 const zMasterLeaveCluster = function (socket, respond) {
     delete zMasterSockets[socket.id];
     if(zmLeaderSocketId === socket.id) {
+      zmLeaderSocketId = undefined;
       chooseLeader();
     }
     respond && respond();

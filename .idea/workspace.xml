@@ -43,7 +43,7 @@
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
           <entry key="Dockerfile" value="22" />
-          <entry key="js" value="806" />
+          <entry key="js" value="818" />
           <entry key="json" value="64" />
         </counts>
       </usages-collector>
@@ -51,7 +51,7 @@
         <counts>
           <entry key="Dockerfile" value="22" />
           <entry key="JSON" value="64" />
-          <entry key="JavaScript" value="806" />
+          <entry key="JavaScript" value="818" />
         </counts>
       </usages-collector>
     </session>
@@ -79,8 +79,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/server.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="4359">
-              <caret line="288" column="1" lean-forward="true" selection-start-line="288" selection-start-column="1" selection-end-line="288" selection-end-column="1" />
+            <state relative-caret-position="546">
+              <caret line="298" column="25" lean-forward="true" selection-start-line="298" selection-start-column="25" selection-end-line="298" selection-end-column="25" />
             </state>
           </provider>
         </entry>
@@ -199,12 +199,12 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1534515763136</updated>
-      <workItem from="1534515764619" duration="4200000" />
+      <workItem from="1534515764619" duration="4652000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="4200000" />
+    <option name="totallyTimeSpent" value="4652000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="22" width="1936" height="1066" extended-state="6" />
@@ -270,8 +270,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/server.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="4359">
-          <caret line="288" column="1" lean-forward="true" selection-start-line="288" selection-start-column="1" selection-end-line="288" selection-end-column="1" />
+        <state relative-caret-position="546">
+          <caret line="298" column="25" lean-forward="true" selection-start-line="298" selection-start-column="25" selection-end-line="298" selection-end-column="25" />
         </state>
       </provider>
     </entry>
