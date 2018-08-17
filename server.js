@@ -62,6 +62,8 @@ httpServer.on('request', function (req, res) {
 
 const sccBrokerSockets = {};
 const sccWorkerSockets = {};
+const zMasterSockets = {};
+let zmLeaderSocketId = undefined;
 let serverReady = STARTUP_DELAY <= 0;
 if (!serverReady) {
   logInfo(`Waiting ${STARTUP_DELAY}ms for initial scc-broker instances before allowing scc-worker instances to join`);
@@ -167,6 +169,10 @@ scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_SC, (req, next) => {
   req.socket.instanceType = instanceType;
   req.socket.instancePort = instancePort;
 
+  if(instanceType === 'zation-master') {
+    next();
+  }
+
   const reportedMajorSemver = getMajorSemver(version);
   const sccComponentIsObsolete = (!instanceType || Number.isNaN(reportedMajorSemver));
   let err;
@@ -226,8 +232,28 @@ scServer.on('connection', function (socket) {
     logInfo(`The scc-worker instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
   });
 
+  socket.on('zMasterJoin', (data,respond) => {
+      socket.instanceId = data.instanceId;
+      socket.instanceIp = getRemoteIp(socket, data);
+      // Only set instanceIpFamily if data.instanceIp is provided.
+      if (data.instanceIp) {
+          socket.instanceIpFamily = data.instanceIpFamily;
+      }
+
+      zMasterSockets[socket.id] = socket;
+
+      chooseLeader();
+      respond(null);
+
+      logInfo(`The zation-master instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
+  });
+
   socket.on('sccWorkerLeaveCluster', function (respond) {
     sccWorkerLeaveCluster(socket, respond);
+  });
+
+  socket.on('zationMasterLeaveCluster', function (respond) {
+      zMasterLeaveCluster(socket, respond);
   });
 
   socket.on('disconnect', function () {
@@ -235,9 +261,43 @@ scServer.on('connection', function (socket) {
       sccBrokerLeaveCluster(socket);
     } else if (socket.instanceType === 'scc-worker') {
       sccWorkerLeaveCluster(socket);
+    } else if (socket.instanceType === 'zation-master') {
+      zMasterLeaveCluster(socket);
     }
   });
 });
+
+const chooseLeader = function ()
+{
+  if(!zmLeaderSocketId && zMasterSockets.length > 0)
+  {
+    const newLeader = getRandomZMaster();
+    newLeader.emit('newLeader',{},(err) =>
+    {
+      if(!err) {
+          zmLeaderSocketId = newLeader.id;
+          logInfo(`New zation-master leader is selected ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with ${socket.id}`);
+      }
+      else {
+        chooseLeader();
+      }
+    });
+  }
+};
+
+const getRandomZMaster = function ()
+{
+  return zMasterSockets[Math.floor(Math.random() * zMasterSockets.length)];
+};
+
+const zMasterLeaveCluster = function (socket, respond) {
+    delete zMasterSockets[socket.id];
+    if(zmLeaderSocketId === socket.id) {
+      chooseLeader();
+    }
+    respond && respond();
+    logInfo(`The zation-master instance ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} left the cluster on socket ${socket.id}`);
+};
 
 httpServer.listen(PORT);
 httpServer.on('listening', function () {
