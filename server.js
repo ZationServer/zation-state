@@ -276,7 +276,7 @@ const chooseLeader = function ()
     {
       if(!err) {
           zmLeaderSocketId = newLeader.id;
-          logInfo(`New zation-master leader is selected ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with ${socket.id}`);
+          logInfo(`New zation-master leader is selected ${newLeader.instanceId} at address ${newLeader.instanceIp} on port ${newLeader.instancePort} with ${newLeader.id}`);
       }
       else {
         chooseLeader();
