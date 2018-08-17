@@ -13,7 +13,7 @@ const DEFAULT_CLUSTER_SCALE_BACK_DELAY = 1000;
 const DEFAULT_CLUSTER_STARTUP_DELAY = 5000;
 
 const PORT = Number(argv.p) || Number(process.env.SCC_STATE_SERVER_PORT) || DEFAULT_PORT;
-const AUTH_KEY = process.env.SCC_AUTH_KEY || null;
+const AUTH_KEY = process.env.cak || process.env.CLUSTER_AUTH_KEY || process.env.SCC_AUTH_KEY || null;
 const FORWARDED_FOR_HEADER = process.env.FORWARDED_FOR_HEADER || null;
 const RETRY_DELAY = Number(argv.r) || Number(process.env.SCC_STATE_SERVER_RETRY_DELAY) || 2000;
 const CLUSTER_SCALE_OUT_DELAY = selectNumericArgument([argv.d, process.env.SCC_STATE_SERVER_SCALE_OUT_DELAY, DEFAULT_CLUSTER_SCALE_OUT_DELAY]);
@@ -263,6 +263,20 @@ scServer.on('connection', function (socket) {
       sccWorkerLeaveCluster(socket);
     } else if (socket.instanceType === 'zation-master') {
       zMasterLeaveCluster(socket);
+    }
+  });
+
+  socket.on('getSyncData', function (respond) {
+    if(!zmLeaderSocketId) {
+      respond(null,{haveLeader : false});
+    }
+    else {
+      zMasterSockets[zmLeaderSocketId].emit('getSyncData',{},(err,data) => {
+        if(err) {
+          respond(err);
+        }
+        respond({haveLeader: true,data : data});
+      })
     }
   });
 });
