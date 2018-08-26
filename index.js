@@ -16,6 +16,7 @@ const DEFAULT_CLUSTER_STARTUP_DELAY = 5000;
 
 const PORT = Number(argv.p) || Number(process.env.SCC_STATE_SERVER_PORT) || DEFAULT_PORT;
 const AUTH_KEY = process.env.cak || process.env.CLUSTER_AUTH_KEY || process.env.SCC_AUTH_KEY || null;
+const SECRET_KEY = process.env.sk || process.env.CLUSTER_SECRET_KEY || process.env.ZATION_CLUSTER_SECRET_KEY || null;
 const FORWARDED_FOR_HEADER = process.env.FORWARDED_FOR_HEADER || null;
 const RETRY_DELAY = Number(argv.r) || Number(process.env.SCC_STATE_SERVER_RETRY_DELAY) || 2000;
 const CLUSTER_SCALE_OUT_DELAY = selectNumericArgument([argv.d, process.env.SCC_STATE_SERVER_SCALE_OUT_DELAY, DEFAULT_CLUSTER_SCALE_OUT_DELAY]);
@@ -64,8 +65,15 @@ httpServer.on('request', function (req, res) {
 
 const sccBrokerSockets = {};
 const sccWorkerSockets = {};
-const zMasterSockets = {};
+
+const regMasterSockets = {};
+const joiMasterSockets = {};
+
 let zmLeaderSocketId = undefined;
+const firstLeader = true;
+let tsEngine = undefined;
+let
+
 let serverReady = STARTUP_DELAY <= 0;
 if (!serverReady) {
   logInfo(`Waiting ${STARTUP_DELAY}ms for initial scc-broker instances before allowing scc-worker instances to join`);
@@ -230,13 +238,49 @@ scServer.on('connection', function (socket) {
     logInfo(`The scc-worker instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
   });
 
-  socket.on('zMasterJoin', (data,respond) => {
+  socket.on('zMasterRegister', (data,respond) =>
+  {
+      //register ip and id
       socket.instanceId = data.instanceId;
       socket.instanceIp = getRemoteIp(socket, data);
       // Only set instanceIpFamily if data.instanceIp is provided.
-      if (data.instanceIp) {
+      if(data.instanceIp) {
           socket.instanceIpFamily = data.instanceIpFamily;
       }
+
+      //is first server?
+      if(regMasterSockets.length === 0)
+      {
+        //saveSettings
+        //leaderAndFirst
+
+
+
+
+      }
+      //look in registered serveres
+      //than say him to be the leader an generate
+
+      //check for settings same
+      //if not respond back with fail
+
+      //add to registered master
+      zMasterSockets[socket.id] = socket;
+
+      //send back info for same settings
+      respond(null);
+
+      logInfo(`The zation-master instance ${data.instanceId} at address ${socket.instanceIp} registers to state on socket ${socket.id}`);
+  });
+
+  socket.on('zMasterJoin', (data,respond) => {
+    socket.instanceId = data.instanceId;
+    socket.instanceIp = getRemoteIp(socket, data);
+    // Only set instanceIpFamily if data.instanceIp is provided.
+    if(data.instanceIp)
+    {
+      socket.instanceIpFamily = data.instanceIpFamily;
+    }
 
       zMasterSockets[socket.id] = socket;
 
