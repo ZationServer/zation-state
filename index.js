@@ -1,27 +1,39 @@
+/*
+Author: Luca Scaringella
+GitHub: LucaCode
+©Copyright by Luca Scaringella
+ */
+
 //SC V 6.1.0
-
-const _ = require('lodash');
-const argv = require('minimist')(process.argv.slice(2));
-const http = require('http');
-const socketCluster = require('socketcluster-server');
-const url = require('url');
-const semverRegex = /\d+\.\d+\.\d+/;
-const packageVersion = require(`./package.json`).version;
+const _                   = require('lodash');
+const argv                = require('minimist')(process.argv.slice(2));
+const http                = require('http');
+const socketCluster       = require('socketcluster-server');
+const url                 = require('url');
+const semverRegex         = /\d+\.\d+\.\d+/;
+const packageVersion      = require(`./package.json`).version;
 const requiredMajorSemver = getMajorSemver(packageVersion);
+const HashSet             = require('hashset');
+const uuidV4              = require('uuid/v4');
 
+//DEFAULT
 const DEFAULT_PORT = 7777;
 const DEFAULT_CLUSTER_SCALE_OUT_DELAY = 5000;
 const DEFAULT_CLUSTER_SCALE_BACK_DELAY = 1000;
 const DEFAULT_CLUSTER_STARTUP_DELAY = 5000;
+const DEFAULT_RECONNECT_START_DURATION = 2000;
+const DEFAULT_RECONNECT_DURATION = 8000;
 
-const PORT = Number(argv.p) || Number(process.env.SCC_STATE_SERVER_PORT) || DEFAULT_PORT;
+const RECONNECT_START_DURATION = Number(process.env.reconnectStartDuration) || DEFAULT_RECONNECT_START_DURATION;
+const RECONNECT_DURATION = Number(process.env.reconnectDuration) || DEFAULT_RECONNECT_DURATION;
+const PORT = Number(argv['p']) || Number(process.env.SCC_STATE_SERVER_PORT) || DEFAULT_PORT;
 const AUTH_KEY = process.env.cak || process.env.CLUSTER_AUTH_KEY || process.env.SCC_AUTH_KEY || null;
 const SECRET_KEY = process.env.sk || process.env.CLUSTER_SECRET_KEY || process.env.ZATION_CLUSTER_SECRET_KEY || null;
 const FORWARDED_FOR_HEADER = process.env.FORWARDED_FOR_HEADER || null;
-const RETRY_DELAY = Number(argv.r) || Number(process.env.SCC_STATE_SERVER_RETRY_DELAY) || 2000;
-const CLUSTER_SCALE_OUT_DELAY = selectNumericArgument([argv.d, process.env.SCC_STATE_SERVER_SCALE_OUT_DELAY, DEFAULT_CLUSTER_SCALE_OUT_DELAY]);
-const CLUSTER_SCALE_BACK_DELAY = selectNumericArgument([argv.d, process.env.SCC_STATE_SERVER_SCALE_BACK_DELAY, DEFAULT_CLUSTER_SCALE_BACK_DELAY]);
-const STARTUP_DELAY = selectNumericArgument([argv.s, process.env.SCC_STATE_SERVER_STARTUP_DELAY, DEFAULT_CLUSTER_STARTUP_DELAY]);
+const RETRY_DELAY = Number(argv['r']) || Number(process.env.SCC_STATE_SERVER_RETRY_DELAY) || 2000;
+const CLUSTER_SCALE_OUT_DELAY = selectNumericArgument([argv['d'], process.env.SCC_STATE_SERVER_SCALE_OUT_DELAY, DEFAULT_CLUSTER_SCALE_OUT_DELAY]);
+const CLUSTER_SCALE_BACK_DELAY = selectNumericArgument([argv['d'], process.env.SCC_STATE_SERVER_SCALE_BACK_DELAY, DEFAULT_CLUSTER_SCALE_BACK_DELAY]);
+const STARTUP_DELAY = selectNumericArgument([argv['s'], process.env.SCC_STATE_SERVER_STARTUP_DELAY, DEFAULT_CLUSTER_STARTUP_DELAY]);
 
 function selectNumericArgument(args) {
   let lastIndex = args.length - 1;
@@ -32,6 +44,24 @@ function selectNumericArgument(args) {
     }
   }
   return Number(args[lastIndex]);
+}
+
+function logError(err) {
+    if (LOG_LEVEL > 0) {
+        console.error(err);
+    }
+}
+
+function logWarn(warn) {
+    if (LOG_LEVEL >= 2) {
+        console.warn(warn);
+    }
+}
+
+function logInfo(info) {
+    if (LOG_LEVEL >= 3) {
+        console.info(info);
+    }
 }
 
 /**
@@ -66,13 +96,25 @@ httpServer.on('request', function (req, res) {
 const sccBrokerSockets = {};
 const sccWorkerSockets = {};
 
+//Cluster master
 const regMasterSockets = {};
 const joiMasterSockets = {};
-
+const instanceIds = new HashSet();
 let zmLeaderSocketId = undefined;
-const firstLeader = true;
-let tsEngine = undefined;
-let
+
+let tmpSettings = undefined;
+let tmpSharedData = undefined;
+
+let reconnectUUID = undefined;
+
+//Part Reconnect
+let reconnectMode = true;
+logInfo(`Reconnect start mode for ${RECONNECT_START_DURATION} active.`);
+let reconnectEnd = Date.now() + RECONNECT_START_DURATION;
+
+setTimeout(() => {
+  reconnectMode = false;
+},RECONNECT_START_DURATION);
 
 let serverReady = STARTUP_DELAY <= 0;
 if (!serverReady) {
@@ -129,20 +171,20 @@ const sccWorkerLeaveCluster = function (socket, respond) {
 };
 
 const sendEventToInstance = function (socket, event, data) {
-  socket.emit(event, data, function (err) {
-    if (err) {
-      logError(err);
-      if (socket.state === 'open') {
-        setTimeout(sendEventToInstance.bind(null, socket, event, data), RETRY_DELAY);
-      }
-    }
-  });
+    socket.emit(event, data,(err) => {
+        if (err) {
+            logError(err);
+            if (socket.state === 'open') {
+                setTimeout(sendEventToInstance.bind(null, socket, event, data), RETRY_DELAY);
+            }
+        }
+    });
 };
 
 const sendEventToAllInstances = function (instances, event, data) {
-  _.forEach(instances, function (socket) {
-    sendEventToInstance(socket, event, data);
-  });
+    _.forEach(instances, (socket) => {
+        sendEventToInstance(socket, event, data);
+    });
 };
 
 const getRemoteIp = function (socket, data) {
@@ -161,7 +203,7 @@ scServer.on('warning', function (err) {
 if (AUTH_KEY) {
   scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_WS, (req, next) => {
     let urlParts = url.parse(req.url, true);
-    if (urlParts.query && urlParts.query.authKey === AUTH_KEY) {
+    if (urlParts['query'] && urlParts.query.authKey === AUTH_KEY) {
       next();
     } else {
       let err = new Error('Cannot connect to the scc-state instance without providing a valid authKey as a URL query argument.');
@@ -240,54 +282,102 @@ scServer.on('connection', function (socket) {
 
   socket.on('zMasterRegister', (data,respond) =>
   {
+    if(!reconnectMode)
+    {
+      if(instanceIds.contains(data.instanceId)) {
+        //instance id all ready registered
+        respond(null,{info : 'instanceIdAlreadyReg'});
+        return;
+      }
+
+      const socketSettings = data['settings'];
+      const socketSharedData = data['sharedData'];
+
       //register ip and id
       socket.instanceId = data.instanceId;
       socket.instanceIp = getRemoteIp(socket, data);
       // Only set instanceIpFamily if data.instanceIp is provided.
       if(data.instanceIp) {
-          socket.instanceIpFamily = data.instanceIpFamily;
+        socket.instanceIpFamily = data.instanceIpFamily;
       }
 
-      //is first server?
       if(regMasterSockets.length === 0)
       {
-        //saveSettings
-        //leaderAndFirst
-
-
-
-
+        //First master
+        tmpSharedData = socketSharedData;
+        tmpSettings = socketSettings;
+        reconnectUUID = uuidV4();
+        respond(null,{info : 'first', reconnectUUID : reconnectUUID});
       }
-      //look in registered serveres
-      //than say him to be the leader an generate
+      else
+      {
+        //New master
+        if(!tmpSettings.same
+            (
+                socketSettings.tsEngine,
+                socketSettings.useSecretKey,
+                socketSettings.useShareTokenAuth
+            )) {
+          respond(null,{info : 'ok',reconnectUUID : reconnectUUID});
+        }
+        else {
+          respond(null,{info : 'notSameSettings'})
+        }
+      }
+    }
+    else {
+      respond(null,{tryAgainIn : reconnectEnd - Date.now()});
+    }
+  });
 
-      //check for settings same
-      //if not respond back with fail
+  socket.on('zMasterReconnect', (data,respond) => {
 
-      //add to registered master
-      zMasterSockets[socket.id] = socket;
+    const socketReconnectUUID = data.reconnectUUID;
+    const socketSettings = data['settings'];
+    const socketSharedData = data['sharedData'];
+    const socketWasLeader = data['wasLeader'];
 
-      //send back info for same settings
-      respond(null);
+    if(regMasterSockets === 0) {
+      //first new reconnection
+      reconnectUUID = socketReconnectUUID;
+      tmpSettings = socketSettings;
+      tmpSharedData = socketSharedData;
+    }
+    else {
+      if(reconnectUUID === socketReconnectUUID)
+      {
+        if(socketWasLeader)
+        {
+          //after reconnection time search new leader
+          if(!zmLeaderSocketId)
+          {
+            //new leader
 
-      logInfo(`The zation-master instance ${data.instanceId} at address ${socket.instanceIp} registers to state on socket ${socket.id}`);
+          }
+          else
+          {
+            //ups all ready an leader in cluster
+
+          }
+        }
+      }
+      else {
+        respond(null,{info : 'wrongReconnectUUID'});
+      }
+    }
   });
 
   socket.on('zMasterJoin', (data,respond) => {
-    socket.instanceId = data.instanceId;
-    socket.instanceIp = getRemoteIp(socket, data);
-    // Only set instanceIpFamily if data.instanceIp is provided.
-    if(data.instanceIp)
-    {
-      socket.instanceIpFamily = data.instanceIpFamily;
+    //check for is reg before join
+    if(!regMasterSockets.includes(socket.id)) {
+      respond(new Error('Register master before join to cluster!'));
+      return;
     }
-
-      zMasterSockets[socket.id] = socket;
-
-      chooseLeader();
-      respond(null);
-
-      logInfo(`The zation-master instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
+    //join
+    joiMasterSockets[socket.id] = socket;
+    chooseLeader();
+    respond(null);
+    logInfo(`The zation-master instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
   });
 
   socket.on('sccBrokerLeaveCluster', function (data,respond) {
@@ -314,26 +404,23 @@ scServer.on('connection', function (socket) {
 
   socket.on('getSyncData', function (d,respond) {
     if(!zmLeaderSocketId) {
-      respond(null,{haveLeader : false});
+      respond(null,{info: 'notNeededToSync'});
     }
     else {
-      zMasterSockets[zmLeaderSocketId].emit('getSyncData',{},(err,data) => {
+      joiMasterSockets[zmLeaderSocketId].emit('getSyncData',{},(err,data) => {
         if(err) {
           respond(err);
         }
-        respond({haveLeader: true,data : data});
+        respond({info: 'ok',data : data});
       })
     }
   });
 });
 
-const chooseLeader = function ()
-{
-  if(!zmLeaderSocketId && zMasterSockets.length > 0)
-  {
+const chooseLeader = function () {
+  if(!zmLeaderSocketId && joiMasterSockets.length > 0) {
     const newLeader = getRandomZMaster();
-    newLeader.emit('newLeader',{},(err) =>
-    {
+    newLeader.emit('newLeader',{},(err) => {
       if(!err) {
           zmLeaderSocketId = newLeader.id;
           logInfo(`New zation-master leader is selected ${newLeader.instanceId} at address ${newLeader.instanceIp} on port ${newLeader.instancePort} with ${newLeader.id}`);
@@ -345,43 +432,38 @@ const chooseLeader = function ()
   }
 };
 
-const getRandomZMaster = function ()
-{
-  return zMasterSockets[Math.floor(Math.random() * zMasterSockets.length)];
+const getRandomZMaster = function () {
+  return joiMasterSockets[Math.floor(Math.random() * joiMasterSockets.length)];
 };
 
 const zMasterLeaveCluster = function (socket, respond) {
-    delete zMasterSockets[socket.id];
-    if(zmLeaderSocketId === socket.id) {
-      zmLeaderSocketId = undefined;
-      chooseLeader();
-    }
-    respond && respond();
-    logInfo(`The zation-master instance ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} left the cluster on socket ${socket.id}`);
+
+  delete joiMasterSockets[socket.id];
+  delete regMasterSockets[socket.id];
+  instanceIds.remove(socket.instanceId);
+
+  //check lead master
+  if(zmLeaderSocketId === socket.id) {
+    zmLeaderSocketId = undefined;
+    chooseLeader();
+  }
+
+  //check all servers are down
+  if(regMasterSockets.length === 0) {
+    //all removed
+    tmpSharedData = undefined;
+    tmpSettings = undefined;
+    logInfo(`All master servers are down. Settings and shared variables have been reset!`);
+  }
+
+  respond && respond();
+  logInfo(`The zation-master instance ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} left the cluster on socket ${socket.id}`);
 };
 
 httpServer.listen(PORT);
 httpServer.on('listening', function () {
   logInfo(`The scc-state instance is listening on port ${PORT}`);
 });
-
-function logError(err) {
-  if (LOG_LEVEL > 0) {
-    console.error(err);
-  }
-}
-
-function logWarn(warn) {
-  if (LOG_LEVEL >= 2) {
-    console.warn(warn);
-  }
-}
-
-function logInfo(info) {
-  if (LOG_LEVEL >= 3) {
-    console.info(info);
-  }
-}
 
 function getMajorSemver(semver) {
   const semverIsValid = typeof semver === 'string' && semver.match(semverRegex);
@@ -392,4 +474,20 @@ function getMajorSemver(semver) {
   } else {
     return NaN;
   }
+}
+
+class MasterSettings
+{
+    constructor(tsEngine,useSecretKey,useShareTokenAuth) {
+      this.tsEngine = tsEngine;
+      this.useSecretKey = useSecretKey;
+      this.useShareTokenAuth = useShareTokenAuth;
+    }
+
+    same(tsEngine,useSecretKey,useShareTokenAuth)
+    {
+      return this.tsEngine === tsEngine &&
+          this.useSecretKey === useSecretKey &&
+          this.useShareTokenAuth === useShareTokenAuth;
+    }
 }
