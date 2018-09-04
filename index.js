@@ -28,7 +28,6 @@ const RECONNECT_START_DURATION = Number(process.env.reconnectStartDuration) || D
 const RECONNECT_DURATION = Number(process.env.reconnectDuration) || DEFAULT_RECONNECT_DURATION;
 const PORT = Number(argv['p']) || Number(process.env.SCC_STATE_SERVER_PORT) || DEFAULT_PORT;
 const AUTH_KEY = process.env.cak || process.env.CLUSTER_AUTH_KEY || process.env.SCC_AUTH_KEY || null;
-const SECRET_KEY = process.env.sk || process.env.CLUSTER_SECRET_KEY || process.env.ZATION_CLUSTER_SECRET_KEY || null;
 const FORWARDED_FOR_HEADER = process.env.FORWARDED_FOR_HEADER || null;
 const RETRY_DELAY = Number(argv['r']) || Number(process.env.SCC_STATE_SERVER_RETRY_DELAY) || 2000;
 const CLUSTER_SCALE_OUT_DELAY = selectNumericArgument([argv['d'], process.env.SCC_STATE_SERVER_SCALE_OUT_DELAY, DEFAULT_CLUSTER_SCALE_OUT_DELAY]);
@@ -99,7 +98,7 @@ const sccWorkerSockets = {};
 //Cluster master
 const regMasterSockets = {};
 const joiMasterSockets = {};
-const instanceIds = new HashSet();
+const zMasterinstanceIds = new HashSet();
 let zmLeaderSocketId = undefined;
 
 let tmpSettings = undefined;
@@ -284,7 +283,7 @@ scServer.on('connection', function (socket) {
   {
     if(!reconnectMode)
     {
-      if(instanceIds.contains(data.instanceId)) {
+      if(zMasterinstanceIds.contains(data.instanceId)) {
         //instance id all ready registered
         respond(null,{info : 'instanceIdAlreadyReg'});
         return;
@@ -318,7 +317,7 @@ scServer.on('connection', function (socket) {
                 socketSettings.useSecretKey,
                 socketSettings.useShareTokenAuth
             )) {
-          respond(null,{info : 'ok',reconnectUUID : reconnectUUID});
+          respond(null,{info : 'ok',reconnectUUID : reconnectUUID,sharedVar : tmpSharedData});
         }
         else {
           respond(null,{info : 'notSameSettings'})
@@ -326,7 +325,7 @@ scServer.on('connection', function (socket) {
       }
     }
     else {
-      respond(null,{tryAgainIn : reconnectEnd - Date.now()});
+      respond(null,{info: 'reconnectMode', tryIn : reconnectEnd - Date.now()});
     }
   });
 
@@ -375,6 +374,7 @@ scServer.on('connection', function (socket) {
     }
     //join
     joiMasterSockets[socket.id] = socket;
+    zMasterinstanceIds.add(socket.instanceId);
     chooseLeader();
     respond(null);
     logInfo(`The zation-master instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
@@ -400,6 +400,10 @@ scServer.on('connection', function (socket) {
     } else if (socket.instanceType === 'zation-master') {
       zMasterLeaveCluster(socket);
     }
+  });
+
+  socket.on('getZMasterIds',(d,respond) =>{
+    respond(null,{ids : zMasterinstanceIds.toArray()});
   });
 
   socket.on('getSyncData', function (d,respond) {
@@ -440,7 +444,7 @@ const zMasterLeaveCluster = function (socket, respond) {
 
   delete joiMasterSockets[socket.id];
   delete regMasterSockets[socket.id];
-  instanceIds.remove(socket.instanceId);
+  zMasterinstanceIds.remove(socket.instanceId);
 
   //check lead master
   if(zmLeaderSocketId === socket.id) {
