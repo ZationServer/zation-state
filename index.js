@@ -47,19 +47,31 @@ function selectNumericArgument(args) {
 
 function logError(err) {
     if (LOG_LEVEL > 0) {
-        console.error(err);
+        console.error('\x1b[31m%s\x1b[0m', '   [Error]',err);
+    }
+}
+
+function logBusy(txt) {
+    if (LOG_LEVEL > 0) {
+        console.error('\x1b[33m%s\x1b[0m', '   [BUSY]',txt);
+    }
+}
+
+function logActive(txt) {
+    if (LOG_LEVEL > 0) {
+        console.error('\x1b[32m%s\x1b[0m', '   [ACTIVE]',txt);
     }
 }
 
 function logWarn(warn) {
     if (LOG_LEVEL >= 2) {
-        console.warn(warn);
+        console.warn('\x1b[31m%s\x1b[0m','   [WARNING]',warn);
     }
 }
 
 function logInfo(info) {
     if (LOG_LEVEL >= 3) {
-        console.info(info);
+        console.log('\x1b[34m%s\x1b[0m','   [INFO]',info);
     }
 }
 
@@ -106,10 +118,12 @@ let tmpSharedData = undefined;
 
 let reconnectUUID = undefined;
 
+logBusy('Launching Zation-Cluster-State Server');
+
 //Part Reconnect
 let reconnectMode = true;
 let reconnectModeType = 'start';
-logInfo(`Reconnect start mode for ${RECONNECT_START_DURATION}ms active.`);
+logInfo(`Reconnect start mode for ${RECONNECT_START_DURATION} ms active.`);
 let reconnectEnd = Date.now() + RECONNECT_START_DURATION;
 
 let reconnectReset = setTimeout(() => {
@@ -402,7 +416,7 @@ scServer.on('connection', function (socket) {
                 reconnectMode = false;
                 chooseLeader();
             }, RECONNECT_DURATION);
-            logInfo(`Reconnect extended mode for ${RECONNECT_DURATION}ms active.`);
+            logInfo(`Reconnect extended mode for ${RECONNECT_DURATION} ms active.`);
 
             await reconnectMaster();
         }
@@ -497,7 +511,7 @@ const zMasterLeaveCluster = function (socket, respond) {
 
 httpServer.listen(PORT);
 httpServer.on('listening', function () {
-  logInfo(`The scc-state instance is listening on port ${PORT}`);
+  logActive(`The Zation-Cluster-State Server is now listening on port ${PORT}`);
 });
 
 function getMajorSemver(semver) {
