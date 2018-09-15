@@ -244,221 +244,213 @@ scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_SC, (req, next) => {
 });
 
 scServer.on('connection', function (socket) {
-  socket.on('sccBrokerJoinCluster', function (data, respond) {
-    socket.instanceId = data.instanceId;
-    socket.instanceIp = getRemoteIp(socket, data);
-    // Only set instanceIpFamily if data.instanceIp is provided.
-    if (data.instanceIp) {
-      socket.instanceIpFamily = data.instanceIpFamily;
-    }
-    socket.instanceSecure = data.instanceSecure;
-    sccBrokerSockets[socket.id] = socket;
-
-    setClusterScaleTimeout(() => {
-      sendEventToAllInstances(sccWorkerSockets, 'sccBrokerJoinCluster', getSCCBrokerClusterState());
-    }, CLUSTER_SCALE_OUT_DELAY);
-
-    respond();
-    logInfo(`The scc-broker instance ${data.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} joined the cluster on socket ${socket.id}`);
-  });
-
-  socket.on('sccWorkerJoinCluster', function (data, respond) {
-    socket.instanceId = data.instanceId;
-    socket.instanceIp = getRemoteIp(socket, data);
-    // Only set instanceIpFamily if data.instanceIp is provided.
-    if (data.instanceIp) {
-      socket.instanceIpFamily = data.instanceIpFamily;
-    }
-
-    if (!serverReady) {
-      logWarn(`The scc-worker instance ${data.instanceId} at address ${socket.instanceIp} on socket ${socket.id} was not allowed to join the cluster because the server is waiting for initial brokers`);
-      return respond(new Error('The server is waiting for initial broker connections'));
-    }
-
-    sccWorkerSockets[socket.id] = socket;
-    respond(null, getSCCBrokerClusterState());
-    logInfo(`The scc-worker instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
-  });
-
-  socket.on('zMasterRegister', (data,respond) =>
-  {
-    if(!reconnectMode)
-    {
-      if(zMasterInstanceIds.contains(data.instanceId)) {
-        //instance id all ready registered
-        respond(null,{info : 'instanceIdAlreadyReg'});
-        return;
-      }
-
-      const socketSettings = data['settings'];
-      const socketSharedData = data['sharedData'];
-
-      //register ip and id
-      socket.instanceId = data.instanceId;
-      socket.instanceIp = getRemoteIp(socket, data);
-      // Only set instanceIpFamily if data.instanceIp is provided.
-      if(data.instanceIp) {
-        socket.instanceIpFamily = data.instanceIpFamily;
-      }
-
-      const addMaster = () => {
-          regMasterSockets[socket.id] = socket;
-          zMasterInstanceIds.add(socket.instanceId);
-      };
-
-      if(regMasterSockets.length === 0)
-      {
-        //First master
-        tmpSharedData = socketSharedData;
-        tmpSettings = new MasterSettings(socketSettings.useSecretKey,socketSettings.useShareTokenAuth);
-        reconnectUUID = uuidV4();
-
-        addMaster();
-        respond(null,{info : 'first', reconnectUUID : reconnectUUID});
-      }
-      else
-      {
-        //New master
-        if(tmpSettings instanceof MasterSettings &&
-            !tmpSettings.same(socketSettings.useSecretKey, socketSettings.useShareTokenAuth))
-        {
-          addMaster();
-          respond(null,{info : 'ok',reconnectUUID : reconnectUUID,sharedVar : tmpSharedData});
+    socket.on('sccBrokerJoinCluster', function (data, respond) {
+        socket.instanceId = data.instanceId;
+        socket.instanceIp = getRemoteIp(socket, data);
+        // Only set instanceIpFamily if data.instanceIp is provided.
+        if (data.instanceIp) {
+            socket.instanceIpFamily = data.instanceIpFamily;
         }
-        else {
-          respond(null,{info : 'notSameSettings'})
+        socket.instanceSecure = data.instanceSecure;
+        sccBrokerSockets[socket.id] = socket;
+
+        setClusterScaleTimeout(() => {
+            sendEventToAllInstances(sccWorkerSockets, 'sccBrokerJoinCluster', getSCCBrokerClusterState());
+        }, CLUSTER_SCALE_OUT_DELAY);
+
+        respond();
+        logInfo(`The scc-broker instance ${data.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} joined the cluster on socket ${socket.id}`);
+    });
+
+    socket.on('sccWorkerJoinCluster', function (data, respond) {
+        socket.instanceId = data.instanceId;
+        socket.instanceIp = getRemoteIp(socket, data);
+        // Only set instanceIpFamily if data.instanceIp is provided.
+        if (data.instanceIp) {
+            socket.instanceIpFamily = data.instanceIpFamily;
         }
-      }
-    }
-    else {
-      respond(null,{info: 'reconnectMode', tryIn : reconnectEnd - Date.now(), mode : reconnectModeType});
-    }
-  });
 
-  socket.on('zMasterReconnect', async (data,respond) => {
+        if (!serverReady) {
+            logWarn(`The scc-worker instance ${data.instanceId} at address ${socket.instanceIp} on socket ${socket.id} was not allowed to join the cluster because the server is waiting for initial brokers`);
+            return respond(new Error('The server is waiting for initial broker connections'));
+        }
 
-    const socketReconnectUUID = data.reconnectUUID;
-    const socketSettings = data['settings'];
-    const socketSharedData = data['sharedData'];
-    const instanceId = data.instanceId;
-    const socketWasLeader = data['wasLeader'];
+        sccWorkerSockets[socket.id] = socket;
+        respond(null, getSCCBrokerClusterState());
+        logInfo(`The scc-worker instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
+    });
 
-    if(joiMasterSockets.includes(socket.id)) {
-        respond(null,{info : 'alreadyJoined'});
-    }
+    socket.on('zMasterRegister', (data, respond) => {
+        if (!reconnectMode) {
+            if (zMasterInstanceIds.contains(data.instanceId)) {
+                //instance id all ready registered
+                respond(null, {info: 'instanceIdAlreadyReg'});
+                return;
+            }
 
-    //register ip and id
-    socket.instanceId = data.instanceId;
-    socket.instanceIp = getRemoteIp(socket, data);
-    // Only set instanceIpFamily if data.instanceIp is provided.
-    if(data.instanceIp) {
-        socket.instanceIpFamily = data.instanceIpFamily;
-    }
+            const socketSettings = data['settings'];
+            const socketSharedData = data['sharedData'];
 
-    const addMaster = () => {
-       regMasterSockets[socket.id] = socket;
-       zMasterInstanceIds.add(socket.instanceId);
-       joiMasterSockets[socket.id] = socket;
-    };
+            //register ip and id
+            socket.instanceId = data.instanceId;
+            socket.instanceIp = getRemoteIp(socket, data);
+            // Only set instanceIpFamily if data.instanceIp is provided.
+            if (data.instanceIp) {
+                socket.instanceIpFamily = data.instanceIpFamily;
+            }
 
-    const reconnectMaster = async () =>
-    {
-        if(socketWasLeader)
-        {
-            //after reconnection time search new leader
-            if(!zmLeaderSocketId) {
-                //new leader
-                zmLeaderSocketId = socket.id;
+            const addMaster = () => {
+                regMasterSockets[socket.id] = socket;
+                zMasterInstanceIds.add(socket.instanceId);
+            };
+
+            if (regMasterSockets.length === 0) {
+                //First master
+                tmpSharedData = socketSharedData;
+                tmpSettings = new MasterSettings(socketSettings.useSecretKey, socketSettings.useShareTokenAuth);
+                reconnectUUID = uuidV4();
+
                 addMaster();
-                logInfo(`Old zation-master leader is reconnected with ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
-                respond(null,{info : 'ok'});
+                respond(null, {info: 'first', reconnectUUID: reconnectUUID});
             }
-            else
-            {
-                //ups all ready an leader in cluster
-                socket.emit('removeLeader',{},(err) =>
-                {
-                    if(!err) {
-                        addMaster();
-                        logInfo(`Old zation-master leader is reconnected and leadership accepted with ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
-                        respond(null,{info : 'ok'});
-                    }
-                    else {
-                        respond(null,{info : 'failedToRemoveLeader'});
-                    }
-                });
+            else {
+                //New master
+                if (tmpSettings instanceof MasterSettings &&
+                    !tmpSettings.same(socketSettings.useSecretKey, socketSettings.useShareTokenAuth)) {
+                    addMaster();
+                    respond(null, {info: 'ok', reconnectUUID: reconnectUUID, sharedVar: tmpSharedData});
+                }
+                else {
+                    respond(null, {info: 'notSameSettings'})
+                }
             }
         }
         else {
-          addMaster();
-          logInfo(`Old zation-master is reconnected with ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
-          respond(null,{info : 'ok'});
+            respond(null, {info: 'reconnectMode', tryIn: reconnectEnd - Date.now(), mode: reconnectModeType});
         }
-    };
+    });
 
-    if(regMasterSockets.length === 0) {
-      //first new reconnection
-      reconnectUUID = socketReconnectUUID;
-      tmpSettings = socketSettings;
-      tmpSharedData = socketSharedData;
+    socket.on('zMasterReconnect', async (data, respond) => {
 
-      //start extended reconnectMode
-      clearTimeout(reconnectReset);
-      reconnectMode = true;
-      reconnectModeType = 'extended';
-      reconnectEnd = Date.now() + RECONNECT_DURATION;
-      reconnectReset = setTimeout(() => {
-        reconnectMode = false;
+        const socketReconnectUUID = data.reconnectUUID;
+        const socketSettings = data['settings'];
+        const socketSharedData = data['sharedData'];
+        const instanceId = data.instanceId;
+        const socketWasLeader = data['wasLeader'];
+
+        if (joiMasterSockets.includes(socket.id)) {
+            respond(null, {info: 'alreadyJoined'});
+        }
+
+        //register ip and id
+        socket.instanceId = data.instanceId;
+        socket.instanceIp = getRemoteIp(socket, data);
+        // Only set instanceIpFamily if data.instanceIp is provided.
+        if (data.instanceIp) {
+            socket.instanceIpFamily = data.instanceIpFamily;
+        }
+
+        const addMaster = () => {
+            regMasterSockets[socket.id] = socket;
+            zMasterInstanceIds.add(socket.instanceId);
+            joiMasterSockets[socket.id] = socket;
+        };
+
+        const reconnectMaster = async () => {
+            if (socketWasLeader) {
+                //after reconnection time search new leader
+                if (!zmLeaderSocketId) {
+                    //new leader
+                    zmLeaderSocketId = socket.id;
+                    addMaster();
+                    logInfo(`Old zation-master leader is reconnected with ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
+                    respond(null, {info: 'ok'});
+                }
+                else {
+                    //ups all ready an leader in cluster
+                    socket.emit('removeLeader', {}, (err) => {
+                        if (!err) {
+                            addMaster();
+                            logInfo(`Old zation-master leader is reconnected and leadership accepted with ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
+                            respond(null, {info: 'ok'});
+                        }
+                        else {
+                            respond(null, {info: 'failedToRemoveLeader'});
+                        }
+                    });
+                }
+            }
+            else {
+                addMaster();
+                logInfo(`Old zation-master is reconnected with ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
+                respond(null, {info: 'ok'});
+            }
+        };
+
+        if (regMasterSockets.length === 0) {
+            //first new reconnection
+            reconnectUUID = socketReconnectUUID;
+            tmpSettings = socketSettings;
+            tmpSharedData = socketSharedData;
+
+            //start extended reconnectMode
+            clearTimeout(reconnectReset);
+            reconnectMode = true;
+            reconnectModeType = 'extended';
+            reconnectEnd = Date.now() + RECONNECT_DURATION;
+            reconnectReset = setTimeout(() => {
+                reconnectMode = false;
+                chooseLeader();
+            }, RECONNECT_DURATION);
+            logInfo(`Reconnect extended mode for ${RECONNECT_DURATION} active.`);
+
+            await reconnectMaster();
+        }
+        else {
+            if (reconnectUUID === socketReconnectUUID) {
+                await reconnectMaster();
+            }
+            else {
+                respond(null, {info: 'wrongReconnectUUID'});
+            }
+        }
+    });
+
+    socket.on('zMasterJoin', (data, respond) => {
+        //check for is reg before join
+        if (!regMasterSockets.includes(socket.id)) {
+            respond(new Error('Register master before join to cluster!'));
+            return;
+        }
+        //join
+        joiMasterSockets[socket.id] = socket;
         chooseLeader();
-      },RECONNECT_DURATION);
-      logInfo(`Reconnect extended mode for ${RECONNECT_DURATION} active.`);
+        respond(null);
+        logInfo(`The zation-master instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
+    });
 
-      await reconnectMaster();
-    }
-    else {
-      if(reconnectUUID === socketReconnectUUID) {
-        await reconnectMaster();
-      }
-      else {
-        respond(null,{info : 'wrongReconnectUUID'});
-      }
-    }
-  });
+    socket.on('sccBrokerLeaveCluster', function (data, respond) {
+        sccBrokerLeaveCluster(socket, respond);
+    });
 
-  socket.on('zMasterJoin', (data,respond) => {
-    //check for is reg before join
-    if(!regMasterSockets.includes(socket.id)) {
-      respond(new Error('Register master before join to cluster!'));
-      return;
-    }
-    //join
-    joiMasterSockets[socket.id] = socket;
-    chooseLeader();
-    respond(null);
-    logInfo(`The zation-master instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
-  });
+    socket.on('sccWorkerLeaveCluster', function (data, respond) {
+        sccWorkerLeaveCluster(socket, respond);
+    });
 
-  socket.on('sccBrokerLeaveCluster', function (data,respond) {
-      sccBrokerLeaveCluster(socket, respond);
-  });
+    socket.on('zationMasterLeaveCluster', function (data, respond) {
+        zMasterLeaveCluster(socket, respond);
+    });
 
-  socket.on('sccWorkerLeaveCluster', function (data,respond) {
-    sccWorkerLeaveCluster(socket, respond);
-  });
-
-  socket.on('zationMasterLeaveCluster', function (data,respond) {
-      zMasterLeaveCluster(socket, respond);
-  });
-
-  socket.on('disconnect', function () {
-    if (socket.instanceType === 'scc-broker') {
-      sccBrokerLeaveCluster(socket);
-    } else if (socket.instanceType === 'scc-worker') {
-      sccWorkerLeaveCluster(socket);
-    } else if (socket.instanceType === 'zation-master') {
-      zMasterLeaveCluster(socket);
-    }
-  });
+    socket.on('disconnect', function () {
+        if (socket.instanceType === 'scc-broker') {
+            sccBrokerLeaveCluster(socket);
+        } else if (socket.instanceType === 'scc-worker') {
+            sccWorkerLeaveCluster(socket);
+        } else if (socket.instanceType === 'zation-master') {
+            zMasterLeaveCluster(socket);
+        }
+    });
+});
 
 const chooseLeader = function () {
   if(!zmLeaderSocketId && joiMasterSockets.length > 0) {
