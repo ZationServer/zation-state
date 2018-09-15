@@ -5,7 +5,12 @@
   "description": "Cluster state tracking and notification engine for Zation clusters.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "start:docker": "pm2 start index.js && pm2 logs index",
+    "dockerBuild": "docker build -t zation-cluster/state . ",
+    "dockerExport" : "docker save --output zation-cluster-state.tar zation-cluster/state",
+    "dockerRun": "docker run --name zation-cluster-state -p7777:7777 zation-cluster/state",
+    "dockerStop": "docker stop zation-cluster-state && docker rm -f zation-cluster-state"
   },
   "repository": {
     "type": "git",

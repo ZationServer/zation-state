@@ -1,4 +1,4 @@
-FROM node:8-slim
+FROM node:8.9
 
 MAINTAINER Zation
 
@@ -9,8 +9,10 @@ RUN mkdir -p /usr/src/
 WORKDIR /usr/src/
 COPY . /usr/src/
 
-RUN npm install .
+RUN npm install
+
+RUN npm install pm2 -g
 
 EXPOSE 7777
 
-CMD ["npm", "start"]
+CMD ["npm", "run", "start:docker"]
