@@ -132,9 +132,9 @@ let reconnectReset = setTimeout(() => {
 
 let serverReady = STARTUP_DELAY <= 0;
 if (!serverReady) {
-  logInfo(`Waiting ${STARTUP_DELAY}ms for initial scc-broker instances before allowing scc-worker instances to join`);
+  logInfo(`Waiting ${STARTUP_DELAY}ms for initial zation-cluster-broker instances before allowing zation-worker instances to join`);
   setTimeout(function() {
-    logInfo('State server is now allowing scc-worker instances to join the cluster');
+    logInfo('State server is now allowing zation-worker instances to join the cluster');
     serverReady = true;
   }, STARTUP_DELAY);
 }
@@ -175,13 +175,13 @@ const sccBrokerLeaveCluster = function (socket, respond) {
   }, CLUSTER_SCALE_BACK_DELAY);
 
   respond && respond();
-  logInfo(`The scc-broker instance ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} left the cluster on socket ${socket.id}`);
+  logInfo(`The zation-cluster-broker instance ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} left the cluster on socket ${socket.id}`);
 };
 
 const sccWorkerLeaveCluster = function (socket, respond) {
   delete sccWorkerSockets[socket.id];
   respond && respond();
-  logInfo(`The scc-worker instance ${socket.instanceId} at address ${socket.instanceIp} left the cluster on socket ${socket.id}`);
+  logInfo(`The zation-worker instance ${socket.instanceId} at address ${socket.instanceIp} left the cluster on socket ${socket.id}`);
 };
 
 const sendEventToInstance = function (socket, event, data) {
@@ -220,7 +220,7 @@ if (AUTH_KEY) {
     if (urlParts['query'] && urlParts.query.authKey === AUTH_KEY) {
       next();
     } else {
-      let err = new Error('Cannot connect to the scc-state instance without providing a valid authKey as a URL query argument.');
+      let err = new Error('Cannot connect to the zation-cluster-state instance without providing a valid authKey as a URL query argument.');
       err.name = 'BadClusterAuthError';
       next(err);
     }
@@ -246,11 +246,11 @@ scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_SC, (req, next) => {
   if (reportedMajorSemver === requiredMajorSemver) {
     return next();
   } else if (sccComponentIsObsolete) {
-    err = new Error(`An obsolete SCC component at address ${remoteAddress} is incompatible with the scc-state@^${packageVersion}. Please, update the SCC component up to version ^${requiredMajorSemver}.0.0`);
+    err = new Error(`An obsolete zation-cluster component at address ${remoteAddress} is incompatible with the zation-cluster-state@^${packageVersion}. Please, update the zation-cluster component up to version ^${requiredMajorSemver}.0.0`);
   } else if (reportedMajorSemver > requiredMajorSemver) {
-    err = new Error(`The scc-state@${packageVersion} is incompatible with the ${instanceType}@${version}. Please, update the scc-state up to version ^${reportedMajorSemver}.0.0`);
+    err = new Error(`The zation-cluster-state@${packageVersion} is incompatible with the ${instanceType}@${version}. Please, update the zation-cluster-state up to version ^${reportedMajorSemver}.0.0`);
   } else {
-    err = new Error(`The ${instanceType}@${version} at address ${remoteAddress}:${instancePort} is incompatible with the scc-state@^${packageVersion}. Please, update the ${instanceType} up to version ^${requiredMajorSemver}.0.0`);
+    err = new Error(`The ${instanceType}@${version} at address ${remoteAddress}:${instancePort} is incompatible with the zation-cluster-state@^${packageVersion}. Please, update the ${instanceType} up to version ^${requiredMajorSemver}.0.0`);
   }
 
   err.name = 'CompatibilityError';
@@ -273,7 +273,7 @@ scServer.on('connection', function (socket) {
         }, CLUSTER_SCALE_OUT_DELAY);
 
         respond();
-        logInfo(`The scc-broker instance ${data.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} joined the cluster on socket ${socket.id}`);
+        logInfo(`The zation-cluster-broker instance ${data.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} joined the cluster on socket ${socket.id}`);
     });
 
     socket.on('sccWorkerJoinCluster', function (data, respond) {
@@ -285,13 +285,13 @@ scServer.on('connection', function (socket) {
         }
 
         if (!serverReady) {
-            logWarn(`The scc-worker instance ${data.instanceId} at address ${socket.instanceIp} on socket ${socket.id} was not allowed to join the cluster because the server is waiting for initial brokers`);
+            logWarn(`The zation-worker instance ${data.instanceId} at address ${socket.instanceIp} on socket ${socket.id} was not allowed to join the cluster because the server is waiting for initial brokers`);
             return respond(new Error('The server is waiting for initial broker connections'));
         }
 
         sccWorkerSockets[socket.id] = socket;
         respond(null, getSCCBrokerClusterState());
-        logInfo(`The scc-worker instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
+        logInfo(`The zation-worker instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
     });
 
     socket.on('zMasterRegister', (data, respond) => {
