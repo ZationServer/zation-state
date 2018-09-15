@@ -109,7 +109,7 @@ let reconnectUUID = undefined;
 //Part Reconnect
 let reconnectMode = true;
 let reconnectModeType = 'start';
-logInfo(`Reconnect start mode for ${RECONNECT_START_DURATION} active.`);
+logInfo(`Reconnect start mode for ${RECONNECT_START_DURATION}ms active.`);
 let reconnectEnd = Date.now() + RECONNECT_START_DURATION;
 
 let reconnectReset = setTimeout(() => {
@@ -402,7 +402,7 @@ scServer.on('connection', function (socket) {
                 reconnectMode = false;
                 chooseLeader();
             }, RECONNECT_DURATION);
-            logInfo(`Reconnect extended mode for ${RECONNECT_DURATION} active.`);
+            logInfo(`Reconnect extended mode for ${RECONNECT_DURATION}ms active.`);
 
             await reconnectMaster();
         }
