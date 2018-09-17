@@ -75,6 +75,24 @@ function logInfo(info) {
     }
 }
 
+Object.size = function(obj) {
+    let size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
+
+Object.getValueArray = function(obj) {
+    let values = [], key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            values.push(obj[key]);
+        }
+    }
+    return values;
+};
+
 /**
  * Log levels:
  * 3 - log everything
@@ -236,7 +254,7 @@ scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_SC, (req, next) => {
   req.socket.instancePort = instancePort;
 
   if(instanceType === 'zation-master') {
-    next();
+    return next();
   }
 
   const reportedMajorSemver = getMajorSemver(version);
@@ -254,7 +272,7 @@ scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_SC, (req, next) => {
   }
 
   err.name = 'CompatibilityError';
-  next(err);
+  return next(err);
 });
 
 scServer.on('connection', function (socket) {
@@ -318,24 +336,24 @@ scServer.on('connection', function (socket) {
                 zMasterInstanceIds.add(socket.instanceId);
             };
 
-            if (regMasterSockets.length === 0) {
+            if (Object.size(regMasterSockets) === 0) {
                 //First master
                 tmpSharedData = socketSharedData;
                 tmpSettings = new MasterSettings(socketSettings.useSecretKey, socketSettings.useShareTokenAuth);
                 reconnectUUID = uuidV4();
-
                 addMaster();
+                logInfo(`First new zation-master-server with instanceId ${socket.instanceId} is connected!, Settings '${tmpSettings.toString()}' are saved!`);
                 respond(null, {info: 'first', reconnectUUID: reconnectUUID});
             }
             else {
                 //New master
-                if (tmpSettings instanceof MasterSettings &&
-                    !tmpSettings.same(socketSettings.useSecretKey, socketSettings.useShareTokenAuth)) {
+                if (tmpSettings instanceof MasterSettings && tmpSettings.same(socketSettings.useSecretKey, socketSettings.useShareTokenAuth)) {
                     addMaster();
                     respond(null, {info: 'ok', reconnectUUID: reconnectUUID, sharedVar: tmpSharedData});
                 }
                 else {
-                    respond(null, {info: 'notSameSettings'})
+                    logInfo(`Zation-master-server with instanceId ${socket.instanceId} has not the same settings!`);
+                    respond(null, {info: 'notSameSettings'});
                 }
             }
         }
@@ -352,7 +370,7 @@ scServer.on('connection', function (socket) {
         const instanceId = data.instanceId;
         const socketWasLeader = data['wasLeader'];
 
-        if (joiMasterSockets.includes(socket.id)) {
+        if (joiMasterSockets.hasOwnProperty(socket.id)) {
             respond(null, {info: 'alreadyJoined'});
         }
 
@@ -377,7 +395,7 @@ scServer.on('connection', function (socket) {
                     //new leader
                     zmLeaderSocketId = socket.id;
                     addMaster();
-                    logInfo(`Old zation-master leader is reconnected with ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
+                    logInfo(`Old zation-master leader is reconnected with instanceId ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
                     respond(null, {info: 'ok'});
                 }
                 else {
@@ -396,15 +414,15 @@ scServer.on('connection', function (socket) {
             }
             else {
                 addMaster();
-                logInfo(`Old zation-master is reconnected with ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
+                logInfo(`Old zation-master is reconnected with instanceId ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
                 respond(null, {info: 'ok'});
             }
         };
 
-        if (regMasterSockets.length === 0) {
+        if (Object.size(regMasterSockets) === 0) {
             //first new reconnection
             reconnectUUID = socketReconnectUUID;
-            tmpSettings = socketSettings;
+            tmpSettings = new MasterSettings(socketSettings.useSecretKey, socketSettings.useShareTokenAuth);
             tmpSharedData = socketSharedData;
 
             //start extended reconnectMode
@@ -432,7 +450,7 @@ scServer.on('connection', function (socket) {
 
     socket.on('zMasterJoin', (data, respond) => {
         //check for is reg before join
-        if (!regMasterSockets.includes(socket.id)) {
+        if (!regMasterSockets.hasOwnProperty(socket.id)) {
             respond(new Error('Register master before join to cluster!'));
             return;
         }
@@ -440,7 +458,7 @@ scServer.on('connection', function (socket) {
         joiMasterSockets[socket.id] = socket;
         chooseLeader();
         respond(null);
-        logInfo(`The zation-master instance ${data.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
+        logInfo(`The zation-master instance ${socket.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
     });
 
     socket.on('sccBrokerLeaveCluster', function (data, respond) {
@@ -467,7 +485,8 @@ scServer.on('connection', function (socket) {
 });
 
 const chooseLeader = function () {
-  if(!zmLeaderSocketId && joiMasterSockets.length > 0) {
+  if(!zmLeaderSocketId && Object.size(joiMasterSockets) > 0) {
+    logInfo(`State server search a new leader...`);
     const newLeader = getRandomZMaster();
     newLeader.emit('newLeader',{},(err) => {
       if(!err) {
@@ -482,7 +501,8 @@ const chooseLeader = function () {
 };
 
 const getRandomZMaster = function () {
-  return joiMasterSockets[Math.floor(Math.random() * joiMasterSockets.length)];
+  const socketIds = Object.getValueArray(joiMasterSockets);
+  return socketIds[Math.floor(Math.random() * socketIds.length)];
 };
 
 const zMasterLeaveCluster = function (socket, respond) {
@@ -493,12 +513,13 @@ const zMasterLeaveCluster = function (socket, respond) {
 
   //check lead master
   if(zmLeaderSocketId === socket.id) {
+    logInfo(`Leader zation-master-server is disconnected!`);
     zmLeaderSocketId = undefined;
     chooseLeader();
   }
 
   //check all servers are down
-  if(regMasterSockets.length === 0) {
+  if(Object.size(regMasterSockets) === 0) {
     //all removed
     tmpSharedData = undefined;
     tmpSettings = undefined;
@@ -530,6 +551,10 @@ class MasterSettings
     constructor(useSecretKey,useShareTokenAuth) {
       this.useSecretKey = useSecretKey;
       this.useShareTokenAuth = useShareTokenAuth;
+    }
+
+    toString() {
+        return `UseSecretKey: ${this.useSecretKey}, UseShareTokenAuth: ${this.useShareTokenAuth}`;
     }
 
     same(useSecretKey,useShareTokenAuth) {
