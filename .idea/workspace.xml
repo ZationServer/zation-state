@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="4c28ab69-dcb6-4f6a-a8c7-b7797124c392" name="Default Changelist" comment="">
+    <list default="true" id="4c28ab69-dcb6-4f6a-a8c7-b7797124c392" name="Default Changelist" comment="update version to 0.6.1">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/index.js" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/.tmp/" />
     <ignored path="$PROJECT_DIR$/temp/" />
@@ -96,26 +95,28 @@
     <session id="1365459459">
       <usages-collector id="statistics.lifecycle.project">
         <counts>
-          <entry key="project.closed" value="1" />
+          <entry key="project.closed" value="4" />
           <entry key="project.open.time.1" value="1" />
           <entry key="project.open.time.2" value="1" />
-          <entry key="project.opened" value="2" />
+          <entry key="project.open.time.8" value="1" />
+          <entry key="project.open.time.9" value="1" />
+          <entry key="project.opened" value="4" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
           <entry key="Dockerfile" value="16" />
           <entry key="js" value="1789" />
-          <entry key="json" value="165" />
-          <entry key="txt" value="175" />
+          <entry key="json" value="167" />
+          <entry key="txt" value="263" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="Dockerfile" value="16" />
-          <entry key="JSON" value="165" />
+          <entry key="JSON" value="167" />
           <entry key="JavaScript" value="1789" />
-          <entry key="PLAIN_TEXT" value="175" />
+          <entry key="PLAIN_TEXT" value="263" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.open" />
@@ -129,8 +130,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/package.json">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="253">
-              <caret line="11" column="55" selection-start-line="11" selection-start-column="55" selection-end-line="11" selection-end-column="55" />
+            <state relative-caret-position="46">
+              <caret line="2" column="19" selection-start-line="2" selection-start-column="19" selection-end-line="2" selection-end-column="19" />
             </state>
           </provider>
         </entry>
@@ -172,8 +173,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/index.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="4909">
-              <caret line="428" column="41" lean-forward="true" selection-start-line="428" selection-start-column="41" selection-end-line="428" selection-end-column="41" />
+            <state relative-caret-position="350">
+              <caret line="115" column="35" selection-start-line="115" selection-start-column="35" selection-end-line="115" selection-end-column="35" />
               <folding>
                 <element signature="n#!!doc" expanded="true" />
               </folding>
@@ -195,6 +196,7 @@
       <find>zMasterInstanceIds</find>
       <find>regMasterSockets</find>
       <find>Old zation-master leader is reconnected with</find>
+      <find>0.6.0</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -205,8 +207,8 @@
       <list>
         <option value="$PROJECT_DIR$/server.js" />
         <option value="$PROJECT_DIR$/Dockerfile" />
-        <option value="$PROJECT_DIR$/package.json" />
         <option value="$PROJECT_DIR$/index.js" />
+        <option value="$PROJECT_DIR$/package.json" />
       </list>
     </option>
   </component>
@@ -226,10 +228,9 @@
       <path value="$PROJECT_DIR$/package.json" />
     </packageJsonPaths>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6" fullScreen="true">
-    <option name="y" value="22" />
+  <component name="ProjectFrameBounds" fullScreen="true">
     <option name="width" value="1440" />
-    <option name="height" value="829" />
+    <option name="height" value="900" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
@@ -291,7 +292,9 @@
       <workItem from="1536224913471" duration="1942000" />
       <workItem from="1536330191454" duration="599000" />
       <workItem from="1537023555661" duration="12888000" />
-      <workItem from="1537171385927" duration="4033000" />
+      <workItem from="1537171385927" duration="5272000" />
+      <workItem from="1537205022871" duration="953000" />
+      <workItem from="1537267850932" duration="798000" />
     </task>
     <task id="LOCAL-00001" summary="add support for reconnect &#10;fix bugs">
       <created>1537031035154</created>
@@ -342,17 +345,31 @@
       <option name="project" value="LOCAL" />
       <updated>1537047502499</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="fix many bugs by master register/reconnect...">
+      <created>1537179145387</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1537179145387</updated>
+    </task>
+    <task id="LOCAL-00009" summary="update version to 0.6.1">
+      <created>1537179487440</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1537179487440</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="63651000" />
+    <option name="totallyTimeSpent" value="66641000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="1440" height="900" extended-state="6" />
+    <frame x="0" y="0" width="1440" height="900" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.16560958" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.16560958" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="npm" order="2" side_tool="true" />
       <window_info id="Favorites" order="3" side_tool="true" />
@@ -366,7 +383,7 @@
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Version Control" order="8" />
       <window_info anchor="bottom" id="Statistic" order="9" />
-      <window_info anchor="bottom" id="Terminal" order="10" visible="true" weight="0.017199017" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="10" visible="true" weight="0.32186732" />
       <window_info anchor="bottom" id="Event Log" order="11" side_tool="true" />
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -387,13 +404,15 @@
     <MESSAGE value="add better console log design and info" />
     <MESSAGE value="change ms" />
     <MESSAGE value="update scc text" />
-    <option name="LAST_COMMIT_MESSAGE" value="update scc text" />
+    <MESSAGE value="fix many bugs by master register/reconnect..." />
+    <MESSAGE value="update version to 0.6.1" />
+    <option name="LAST_COMMIT_MESSAGE" value="update version to 0.6.1" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/package.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="253">
-          <caret line="11" column="55" selection-start-line="11" selection-start-column="55" selection-end-line="11" selection-end-column="55" />
+        <state relative-caret-position="46">
+          <caret line="2" column="19" selection-start-line="2" selection-start-column="19" selection-end-line="2" selection-end-column="19" />
         </state>
       </provider>
     </entry>
@@ -428,8 +447,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/index.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="4909">
-          <caret line="428" column="41" lean-forward="true" selection-start-line="428" selection-start-column="41" selection-end-line="428" selection-end-column="41" />
+        <state relative-caret-position="350">
+          <caret line="115" column="35" selection-start-line="115" selection-start-column="35" selection-end-line="115" selection-end-column="35" />
           <folding>
             <element signature="n#!!doc" expanded="true" />
           </folding>
