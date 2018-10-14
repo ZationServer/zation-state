@@ -70,7 +70,7 @@ function logWarn(warn) {
 }
 
 function logInfo(info) {
-    if (LOG_LEVEL >= 3) {
+    if (LOG_LEVEL >= 2) {
         console.log('\x1b[34m%s\x1b[0m','   [INFO]',info);
     }
 }
@@ -103,10 +103,10 @@ Object.getValueArray = function(obj) {
 let LOG_LEVEL;
 if (typeof argv.l !== 'undefined') {
   LOG_LEVEL = Number(argv.l);
-} else if (typeof process.env.SCC_STATE_LOG_LEVEL !== 'undefined') {
-  LOG_LEVEL = Number(process.env.SCC_STATE_LOG_LEVEL);
+} else if (typeof process.env.LOG_LEVEL !== 'undefined') {
+  LOG_LEVEL = Number(process.env.LOG_LEVEL);
 } else {
-  LOG_LEVEL = 3;
+  LOG_LEVEL = 2;
 }
 
 const httpServer = http.createServer();
@@ -225,11 +225,16 @@ const getRemoteIp = function (socket, data) {
 };
 
 scServer.on('error', function (err) {
-  logError(err);
+    if(LOG_LEVEL > 2) {
+        logError(err);
+    }
 });
 
-scServer.on('warning', function (err) {
-  logWarn(err);
+scServer.on('warning', function (err)
+{
+    if(LOG_LEVEL > 2) {
+        logWarn(err);
+    }
 });
 
 if (AUTH_KEY) {
@@ -367,7 +372,6 @@ scServer.on('connection', function (socket) {
         const socketReconnectUUID = data.reconnectUUID;
         const socketSettings = data['settings'];
         const socketSharedData = data['sharedData'];
-        const instanceId = data.instanceId;
         const socketWasLeader = data['wasLeader'];
 
         if (joiMasterSockets.hasOwnProperty(socket.id)) {
