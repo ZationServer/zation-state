@@ -1,6 +1,6 @@
 {
   "name": "zation-cluster-state",
-  "version": "6.0.1",
+  "version": "6.0.2",
   "license": "MIT",
   "description": "Cluster state tracking and notification engine for Zation clusters.",
   "main": "index.js",
@@ -8,7 +8,7 @@
     "start": "node index.js",
     "start:docker": "pm2 start index.js && pm2 logs index",
     "dockerBuild": "docker build -t zation-cluster/state . ",
-    "dockerExport" : "docker save --output zation-cluster-state.tar zation-cluster/state",
+    "dockerExport": "docker save --output zation-cluster-state.tar zation-cluster/state",
     "dockerRun": "docker run --name zation-cluster-state -p7777:7777 zation-cluster/state",
     "dockerStop": "docker stop zation-cluster-state && docker rm -f zation-cluster-state"
   },
@@ -32,7 +32,7 @@
     "secure"
   ],
   "dependencies": {
-    "lodash": "4.17.10",
+    "lodash": ">=4.17.11",
     "minimist": "1.2.0",
     "socketcluster-server": "14.0.0",
     "hashset": "0.0.6",
