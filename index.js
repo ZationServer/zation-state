@@ -112,6 +112,8 @@ if (typeof argv.l !== 'undefined') {
 const httpServer = http.createServer();
 const scServer = socketCluster.attach(httpServer,{});
 
+process.title = `Zation Cluster State`;
+
 httpServer.on('request', function (req, res) {
   if (req.url === '/health-check') {
     res.writeHead(200, {'Content-Type': 'text/html'});
