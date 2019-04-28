@@ -4,8 +4,7 @@ GitHub: LucaCode
 ©Copyright by Luca Scaringella
  */
 
-//SC V 6.1.0
-const _                   = require('lodash');
+//SC V 6.1.1
 const argv                = require('minimist')(process.argv.slice(2));
 const http                = require('http');
 const socketCluster       = require('socketcluster-server');
@@ -161,7 +160,8 @@ if (!serverReady) {
 
 const getSCCBrokerClusterState = function () {
   const sccBrokerURILookup = {};
-  _.forOwn(sccBrokerSockets, function (socket) {
+   Object.keys(sccBrokerSockets).forEach((socketId) => {
+    const socket = sccBrokerSockets[socketId];
     const targetProtocol = socket.instanceSecure ? 'wss' : 'ws';
     let instanceIp;
     if (socket.instanceIpFamily === 'IPv4') {
@@ -216,8 +216,8 @@ const sendEventToInstance = function (socket, event, data) {
 };
 
 const sendEventToAllInstances = function (instances, event, data) {
-    _.forEach(instances, (socket) => {
-        sendEventToInstance(socket, event, data);
+    Object.keys(instances).forEach((socketId) => {
+        sendEventToInstance(instances[socketId], event, data);
     });
 };
 

@@ -1,6 +1,6 @@
 {
   "name": "zation-cluster-state",
-  "version": "6.0.2",
+  "version": "6.0.3",
   "license": "MIT",
   "description": "Cluster state tracking and notification engine for Zation clusters.",
   "main": "index.js",
@@ -32,9 +32,8 @@
     "secure"
   ],
   "dependencies": {
-    "lodash": ">=4.17.11",
     "minimist": "1.2.0",
-    "socketcluster-server": "14.0.0",
+    "socketcluster-server": "14.4.0",
     "hashset": "0.0.6",
     "uuid": "3.3.2"
   }

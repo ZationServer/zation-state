@@ -2,7 +2,7 @@ FROM node:8.9
 
 MAINTAINER Zation
 
-LABEL version="6.0.0"
+LABEL version="6.0.3"
 LABEL description="Docker file for Zation Cluster State Server"
 
 RUN mkdir -p /usr/src/
