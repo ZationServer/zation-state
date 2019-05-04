@@ -5,6 +5,8 @@ GitHub: LucaCode
  */
 
 //SC V 6.1.1
+const ZATION_CLUSTER_VERSION = 1;
+
 const argv                = require('minimist')(process.argv.slice(2));
 const http                = require('http');
 const socketCluster       = require('socketcluster-server');
@@ -20,11 +22,11 @@ const DEFAULT_PORT = 7777;
 const DEFAULT_CLUSTER_SCALE_OUT_DELAY = 5000;
 const DEFAULT_CLUSTER_SCALE_BACK_DELAY = 1000;
 const DEFAULT_CLUSTER_STARTUP_DELAY = 5000;
-const DEFAULT_RECONNECT_START_DURATION = 2000;
-const DEFAULT_RECONNECT_DURATION = 8000;
+const DEFAULT_START_RECONNECT_DURATION = 2500;
+const DEFAULT_WAIT_RECONNECT_DURATION = 5000;
 
-const RECONNECT_START_DURATION = Number(process.env.reconnectStartDuration) || DEFAULT_RECONNECT_START_DURATION;
-const RECONNECT_DURATION = Number(process.env.reconnectDuration) || DEFAULT_RECONNECT_DURATION;
+const START_RECONNECT_DURATION = Number(process.env.startReconnectDuration) || DEFAULT_START_RECONNECT_DURATION;
+const WAIT_RECONNECT_DURATION = Number(process.env.waitReconnectDuration) || DEFAULT_WAIT_RECONNECT_DURATION;
 const PORT = Number(argv['p']) || Number(process.env.SCC_STATE_SERVER_PORT) || DEFAULT_PORT;
 const AUTH_KEY = process.env.cak || process.env.CLUSTER_AUTH_KEY || process.env.SCC_AUTH_KEY || null;
 const FORWARDED_FOR_HEADER = process.env.FORWARDED_FOR_HEADER || null;
@@ -100,8 +102,8 @@ Object.getValueArray = function(obj) {
  * 0 - log nothing
  */
 let LOG_LEVEL;
-if (typeof argv.l !== 'undefined') {
-  LOG_LEVEL = Number(argv.l);
+if (typeof argv['l'] !== 'undefined') {
+  LOG_LEVEL = Number(argv['l']);
 } else if (typeof process.env.LOG_LEVEL !== 'undefined') {
   LOG_LEVEL = Number(process.env.LOG_LEVEL);
 } else {
@@ -109,6 +111,7 @@ if (typeof argv.l !== 'undefined') {
 }
 
 const httpServer = http.createServer();
+// noinspection JSCheckFunctionSignatures
 const scServer = socketCluster.attach(httpServer,{});
 
 process.title = `Zation Cluster State`;
@@ -128,26 +131,17 @@ const sccWorkerSockets = {};
 
 //Cluster master
 const regMasterSockets = {};
-const joiMasterSockets = {};
+const joinMasterSockets = {};
 const zMasterInstanceIds = new HashSet();
 let zmLeaderSocketId = undefined;
 
-let tmpSettings = undefined;
-let tmpSharedData = undefined;
-
-let reconnectUUID = undefined;
+let currentSettings = undefined;
+let currentSharedData = undefined;
+let currentReconnectUUID = undefined;
 
 logBusy('Launching Zation-Cluster-State Server');
 
-//Part Reconnect
-let reconnectMode = true;
-let reconnectModeType = 'start';
-logInfo(`Reconnect start mode for ${RECONNECT_START_DURATION}ms active.`);
-let reconnectEnd = Date.now() + RECONNECT_START_DURATION;
-
-let reconnectReset = setTimeout(() => {
-  reconnectMode = false;
-},RECONNECT_START_DURATION);
+const reconnectModeEngine = new ReconnectModeEngine();
 
 let serverReady = STARTUP_DELAY <= 0;
 if (!serverReady) {
@@ -242,7 +236,7 @@ scServer.on('warning', function (err)
 if (AUTH_KEY) {
   scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_WS, (req, next) => {
     let urlParts = url.parse(req.url, true);
-    if (urlParts['query'] && urlParts.query.authKey === AUTH_KEY) {
+    if (urlParts['query'] && urlParts.query['authKey'] === AUTH_KEY) {
       next();
     } else {
       let err = new Error('Cannot connect to the zation-cluster-state instance without providing a valid authKey as a URL query argument.');
@@ -261,7 +255,15 @@ scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_SC, (req, next) => {
   req.socket.instancePort = instancePort;
 
   if(instanceType === 'zation-master') {
-    return next();
+      const zationClusterVersion = urlParts.query['zationClusterVersion'];
+      if(zationClusterVersion === ZATION_CLUSTER_VERSION){
+          next();
+      }
+      else {
+          const err = new Error('Zation master cannot connect to the state server with a not compatible zation cluster version.');
+          err.name = 'BadZationClusterVersion';
+          next(err);
+      }
   }
 
   const reportedMajorSemver = getMajorSemver(version);
@@ -320,7 +322,7 @@ scServer.on('connection', function (socket) {
     });
 
     socket.on('zMasterRegister', (data, respond) => {
-        if (!reconnectMode) {
+        if (!reconnectModeEngine.isReconnectModeActive()) {
             if (zMasterInstanceIds.contains(data.instanceId)) {
                 //instance id all ready registered
                 respond(null, {info: 'instanceIdAlreadyReg'});
@@ -345,18 +347,18 @@ scServer.on('connection', function (socket) {
 
             if (Object.size(regMasterSockets) === 0) {
                 //First master
-                tmpSharedData = socketSharedData;
-                tmpSettings = new MasterSettings(socketSettings.useSecretKey, socketSettings.useShareTokenAuth);
-                reconnectUUID = uuidV4();
+                currentSharedData = socketSharedData;
+                currentSettings = new MasterSettings(socketSettings.useClusterSecretKey, socketSettings.useShareTokenAuth);
+                currentReconnectUUID = uuidV4();
                 addMaster();
-                logInfo(`First new zation-master-server with instanceId ${socket.instanceId} is connected!, Settings '${tmpSettings.toString()}' are saved!`);
-                respond(null, {info: 'first', reconnectUUID: reconnectUUID});
+                logInfo(`First new zation-master-server with instanceId ${socket.instanceId} is connected!, Settings '${currentSettings.toString()}' are saved!`);
+                respond(null, {info: 'first', reconnectUUID: currentReconnectUUID});
             }
             else {
                 //New master
-                if (tmpSettings instanceof MasterSettings && tmpSettings.same(socketSettings.useSecretKey, socketSettings.useShareTokenAuth)) {
+                if (currentSettings instanceof MasterSettings && currentSettings.same(socketSettings.useClusterSecretKey, socketSettings.useShareTokenAuth)) {
                     addMaster();
-                    respond(null, {info: 'ok', reconnectUUID: reconnectUUID, sharedVar: tmpSharedData});
+                    respond(null, {info: 'ok', reconnectUUID: currentReconnectUUID, sharedData: currentSharedData});
                 }
                 else {
                     logInfo(`Zation-master-server with instanceId ${socket.instanceId} has not the same settings!`);
@@ -365,7 +367,12 @@ scServer.on('connection', function (socket) {
             }
         }
         else {
-            respond(null, {info: 'reconnectMode', tryIn: reconnectEnd - Date.now(), mode: reconnectModeType});
+            respond(null,
+                {
+                    info: 'reconnectMode',
+                    tryIn: reconnectModeEngine.getReconnectEnd() - Date.now(),
+                    mode: reconnectModeEngine.getReconnectModeType()
+                });
         }
     });
 
@@ -376,7 +383,7 @@ scServer.on('connection', function (socket) {
         const socketSharedData = data['sharedData'];
         const socketWasLeader = data['wasLeader'];
 
-        if (joiMasterSockets.hasOwnProperty(socket.id)) {
+        if (joinMasterSockets.hasOwnProperty(socket.id)) {
             respond(null, {info: 'alreadyJoined'});
         }
 
@@ -391,10 +398,17 @@ scServer.on('connection', function (socket) {
         const addMaster = () => {
             regMasterSockets[socket.id] = socket;
             zMasterInstanceIds.add(socket.instanceId);
-            joiMasterSockets[socket.id] = socket;
+            joinMasterSockets[socket.id] = socket;
         };
 
-        const reconnectMaster = async () => {
+        if (currentReconnectUUID === socketReconnectUUID) {
+
+            if (Object.size(regMasterSockets) === 0) {
+                //first new reconnection
+                currentSettings = new MasterSettings(socketSettings.useClusterSecretKey, socketSettings.useShareTokenAuth);
+                currentSharedData = socketSharedData;
+            }
+
             if (socketWasLeader) {
                 //after reconnection time search new leader
                 if (!zmLeaderSocketId) {
@@ -406,16 +420,7 @@ scServer.on('connection', function (socket) {
                 }
                 else {
                     //ups all ready an leader in cluster
-                    socket.emit('removeLeader', {}, (err) => {
-                        if (!err) {
-                            addMaster();
-                            logInfo(`Old zation-master leader is reconnected and leadership accepted with ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
-                            respond(null, {info: 'ok'});
-                        }
-                        else {
-                            respond(null, {info: 'failedToRemoveLeader'});
-                        }
-                    });
+                    respond(null, {info: 'removeLeadership'});
                 }
             }
             else {
@@ -423,45 +428,20 @@ scServer.on('connection', function (socket) {
                 logInfo(`Old zation-master is reconnected with instanceId ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
                 respond(null, {info: 'ok'});
             }
-        };
-
-        if (Object.size(regMasterSockets) === 0) {
-            //first new reconnection
-            reconnectUUID = socketReconnectUUID;
-            tmpSettings = new MasterSettings(socketSettings.useSecretKey, socketSettings.useShareTokenAuth);
-            tmpSharedData = socketSharedData;
-
-            //start extended reconnectMode
-            clearTimeout(reconnectReset);
-            reconnectMode = true;
-            reconnectModeType = 'extended';
-            reconnectEnd = Date.now() + RECONNECT_DURATION;
-            reconnectReset = setTimeout(() => {
-                reconnectMode = false;
-                chooseLeader();
-            }, RECONNECT_DURATION);
-            logInfo(`Reconnect extended mode for ${RECONNECT_DURATION}ms active.`);
-
-            await reconnectMaster();
         }
         else {
-            if (reconnectUUID === socketReconnectUUID) {
-                await reconnectMaster();
-            }
-            else {
-                respond(null, {info: 'wrongReconnectUUID'});
-            }
+            respond(null, {info: 'wrongReconnectUUID'});
         }
     });
 
     socket.on('zMasterJoin', (data, respond) => {
         //check for is reg before join
         if (!regMasterSockets.hasOwnProperty(socket.id)) {
-            respond(new Error('Register master before join to cluster!'));
+            respond(new Error('Register master before join the cluster!'));
             return;
         }
         //join
-        joiMasterSockets[socket.id] = socket;
+        joinMasterSockets[socket.id] = socket;
         chooseLeader();
         respond(null);
         logInfo(`The zation-master instance ${socket.instanceId} at address ${socket.instanceIp} joined the cluster on socket ${socket.id}`);
@@ -491,7 +471,7 @@ scServer.on('connection', function (socket) {
 });
 
 const chooseLeader = function () {
-  if(!zmLeaderSocketId && Object.size(joiMasterSockets) > 0) {
+  if(!zmLeaderSocketId && Object.size(joinMasterSockets) > 0) {
     logInfo(`State server search a new leader...`);
     const newLeader = getRandomZMaster();
     newLeader.emit('newLeader',{},(err) => {
@@ -507,13 +487,13 @@ const chooseLeader = function () {
 };
 
 const getRandomZMaster = function () {
-  const socketIds = Object.getValueArray(joiMasterSockets);
+  const socketIds = Object.getValueArray(joinMasterSockets);
   return socketIds[Math.floor(Math.random() * socketIds.length)];
 };
 
 const zMasterLeaveCluster = function (socket, respond) {
 
-  delete joiMasterSockets[socket.id];
+  delete joinMasterSockets[socket.id];
   delete regMasterSockets[socket.id];
   zMasterInstanceIds.remove(socket.instanceId);
 
@@ -527,9 +507,10 @@ const zMasterLeaveCluster = function (socket, respond) {
   //check all servers are down
   if(Object.size(regMasterSockets) === 0) {
     //all removed
-    tmpSharedData = undefined;
-    tmpSettings = undefined;
-    logInfo(`All master servers are down. Settings and shared data were reset!`);
+    currentSharedData = undefined;
+    currentSettings = undefined;
+    reconnectModeEngine.setReconnectMode();
+    logInfo(`All master servers are down. Settings and shared data were reset.`);
   }
 
   respond && respond();
@@ -552,18 +533,58 @@ function getMajorSemver(semver) {
   }
 }
 
-class MasterSettings
-{
-    constructor(useSecretKey,useShareTokenAuth) {
-      this.useSecretKey = useSecretKey;
+class ReconnectModeEngine {
+
+    constructor(){
+        //start reconnect
+        this.reconnectMode = true;
+        this.reconnectModeType = 'start';
+        this.reconnectEnd = Date.now() + START_RECONNECT_DURATION;
+        this.reconnectReset = setTimeout(() => {
+            this.reconnectMode = false;
+        },START_RECONNECT_DURATION);
+
+        logInfo(`Start reconnect for ${START_RECONNECT_DURATION}ms active.`);
+    }
+
+    setReconnectMode() {
+        clearTimeout(this.reconnectReset);
+        this.reconnectMode = true;
+        this.reconnectModeType = 'wait';
+        this.reconnectEnd = Date.now() + WAIT_RECONNECT_DURATION;
+        this.reconnectReset = setTimeout(() => {
+            this.reconnectMode = false;
+            chooseLeader();
+        }, WAIT_RECONNECT_DURATION);
+
+        logInfo(`Wait reconnect for ${WAIT_RECONNECT_DURATION}ms active.`);
+    }
+
+    isReconnectModeActive() {
+        return this.reconnectMode;
+    }
+
+    getReconnectModeType() {
+        return this.reconnectModeType;
+    }
+
+    getReconnectEnd() {
+        return this.reconnectEnd;
+    }
+}
+
+
+class MasterSettings {
+    constructor(useClusterSecretKey,useShareTokenAuth) {
+      this.useClusterSecretKey = useClusterSecretKey;
       this.useShareTokenAuth = useShareTokenAuth;
     }
 
     toString() {
-        return `UseSecretKey: ${this.useSecretKey}, UseShareTokenAuth: ${this.useShareTokenAuth}`;
+        return `UseClusterSecretKey: ${this.useClusterSecretKey}, UseShareTokenAuth: ${this.useShareTokenAuth}`;
     }
 
-    same(useSecretKey,useShareTokenAuth) {
-      return this.useSecretKey === useSecretKey && this.useShareTokenAuth === useShareTokenAuth;
+    same(useClusterSecretKey,useShareTokenAuth) {
+      return this.useClusterSecretKey === useClusterSecretKey && this.useShareTokenAuth === useShareTokenAuth;
     }
 }
