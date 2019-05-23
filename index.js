@@ -141,8 +141,6 @@ let currentReconnectUUID = undefined;
 
 logBusy('Launching Zation-Cluster-State Server');
 
-const reconnectModeEngine = new ReconnectModeEngine();
-
 let serverReady = STARTUP_DELAY <= 0;
 if (!serverReady) {
   logInfo(`Waiting ${STARTUP_DELAY}ms for initial zation-cluster-broker instances before allowing zation-worker instances to join`);
@@ -573,6 +571,7 @@ class ReconnectModeEngine {
     }
 }
 
+const reconnectModeEngine = new ReconnectModeEngine();
 
 class MasterSettings {
     constructor(useClusterSecretKey,useShareTokenAuth) {
