@@ -233,12 +233,13 @@ scServer.on('warning', function (err)
 
 if (AUTH_KEY) {
   scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_WS, (req, next) => {
-    let urlParts = url.parse(req.url, true);
+    const urlParts = url.parse(req.url, true);
     if (urlParts['query'] && urlParts.query['authKey'] === AUTH_KEY) {
       next();
     } else {
-      let err = new Error('Cannot connect to the zation-cluster-state instance without providing a valid authKey as a URL query argument.');
+      const err = new Error('Cannot connect to the zation-cluster-state instance without providing a valid authKey as a URL query argument.');
       err.name = 'BadClusterAuthError';
+        err.statusCode = 4011;
       next(err);
     }
   });
@@ -260,6 +261,7 @@ scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_SC, (req, next) => {
       else {
           const err = new Error('Zation master cannot connect to the state server with a not compatible zation cluster version.');
           err.name = 'BadZationClusterVersion';
+          err.statusCode = 4010;
           return next(err);
       }
   }
