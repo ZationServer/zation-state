@@ -253,14 +253,14 @@ scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_SC, (req, next) => {
   req.socket.instancePort = instancePort;
 
   if(instanceType === 'zation-master') {
-      const zationClusterVersion = urlParts.query['zationClusterVersion'];
+      const zationClusterVersion = parseInt(urlParts.query['zationClusterVersion']);
       if(zationClusterVersion === ZATION_CLUSTER_VERSION){
-          next();
+          return next();
       }
       else {
           const err = new Error('Zation master cannot connect to the state server with a not compatible zation cluster version.');
           err.name = 'BadZationClusterVersion';
-          next(err);
+          return next(err);
       }
   }
 
