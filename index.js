@@ -509,7 +509,7 @@ const zMasterLeaveCluster = function (socket, respond) {
     //all removed
     currentSharedData = undefined;
     currentSettings = undefined;
-    reconnectModeEngine.setReconnectMode();
+    reconnectModeEngine.activateWaitReconnect();
     logInfo(`All master servers are down. Settings and shared data were reset.`);
   }
 
@@ -537,26 +537,24 @@ class ReconnectModeEngine {
 
     constructor(){
         //start reconnect
-        this.reconnectMode = true;
-        this.reconnectModeType = 'start';
-        this.reconnectEnd = Date.now() + START_RECONNECT_DURATION;
-        this.reconnectReset = setTimeout(() => {
-            this.reconnectMode = false;
-        },START_RECONNECT_DURATION);
-
-        logInfo(`Start reconnect for ${START_RECONNECT_DURATION}ms active.`);
+        this._setReconnect(START_RECONNECT_DURATION,'start');
     }
 
-    setReconnectMode() {
+    activateWaitReconnect() {
         clearTimeout(this.reconnectReset);
+        this._setReconnect(WAIT_RECONNECT_DURATION,'wait');
+    }
+
+    _setReconnect(duration,mode)
+    {
         this.reconnectMode = true;
-        this.reconnectModeType = 'wait';
-        this.reconnectEnd = Date.now() + WAIT_RECONNECT_DURATION;
+        this.reconnectModeType = mode;
+        this.reconnectEnd = Date.now() + duration;
         this.reconnectReset = setTimeout(() => {
             this.reconnectMode = false;
-        }, WAIT_RECONNECT_DURATION);
+        }, duration);
 
-        logInfo(`Wait reconnect for ${WAIT_RECONNECT_DURATION}ms active.`);
+        logInfo(`Reconnect ${mode} mode active for ${duration}ms.`);
     }
 
     isReconnectModeActive() {
