@@ -399,38 +399,38 @@ scServer.on('connection', function (socket) {
             regMasterSockets[socket.id] = socket;
             zMasterInstanceIds.add(socket.instanceId);
             joinMasterSockets[socket.id] = socket;
+            chooseLeader();
         };
 
-        if (currentReconnectUUID === socketReconnectUUID) {
 
-            if (Object.size(regMasterSockets) === 0) {
-                //first new reconnection
-                currentSettings = new MasterSettings(socketSettings.useClusterSecretKey, socketSettings.useShareTokenAuth);
-                currentSharedData = socketSharedData;
-            }
+        if (Object.size(regMasterSockets) === 0) {
+            //first new reconnection
+            currentReconnectUUID = socketReconnectUUID;
+            currentSettings = new MasterSettings(socketSettings.useClusterSecretKey, socketSettings.useShareTokenAuth);
+            currentSharedData = socketSharedData;
+        }
+        else if(currentReconnectUUID !== socketReconnectUUID){
+            respond(null, {info: 'wrongReconnectUUID'});
+            return;
+        }
 
-            if (socketWasLeader) {
-                //after reconnection time search new leader
-                if (!zmLeaderSocketId) {
-                    //new leader
-                    zmLeaderSocketId = socket.id;
-                    addMaster();
-                    logInfo(`Old zation-master leader is reconnected with instanceId ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
-                    respond(null, {info: 'ok'});
-                }
-                else {
-                    //ups all ready an leader in cluster
-                    respond(null, {info: 'removeLeadership'});
-                }
+        if (socketWasLeader) {
+            if (!zmLeaderSocketId) {
+                //new leader
+                zmLeaderSocketId = socket.id;
+                addMaster();
+                logInfo(`Old zation-master leader is reconnected with instanceId ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
+                respond(null, {info: 'ok'});
             }
             else {
-                addMaster();
-                logInfo(`Old zation-master is reconnected with instanceId ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
-                respond(null, {info: 'ok'});
+                //ups all ready an leader in cluster
+                respond(null, {info: 'removeLeadership'});
             }
         }
         else {
-            respond(null, {info: 'wrongReconnectUUID'});
+            addMaster();
+            logInfo(`Old zation-master is reconnected with instanceId ${socket.instanceId} at address ${socket.instanceIp} on port ${socket.instancePort} with socketId ${socket.id}`);
+            respond(null, {info: 'ok'});
         }
     });
 
@@ -554,7 +554,6 @@ class ReconnectModeEngine {
         this.reconnectEnd = Date.now() + WAIT_RECONNECT_DURATION;
         this.reconnectReset = setTimeout(() => {
             this.reconnectMode = false;
-            chooseLeader();
         }, WAIT_RECONNECT_DURATION);
 
         logInfo(`Wait reconnect for ${WAIT_RECONNECT_DURATION}ms active.`);
