@@ -112,7 +112,9 @@ if (typeof argv['l'] !== 'undefined') {
 
 const httpServer = http.createServer();
 // noinspection JSCheckFunctionSignatures
-const scServer = socketCluster.attach(httpServer,{});
+const scServer = socketCluster.attach(httpServer,{
+    wsEngine : 'z-uws'
+});
 
 process.title = `Zation Cluster State`;
 
