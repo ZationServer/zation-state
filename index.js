@@ -261,7 +261,7 @@ scServer.addMiddleware(scServer.MIDDLEWARE_HANDSHAKE_SC, (req, next) => {
           return next();
       }
       else {
-          const err = new Error('Zation master cannot connect to the state server with a not compatible zation cluster version.');
+          const err = new Error('Zation master cannot connect to the state server with a incompatible zation cluster version.');
           err.name = 'BadZationClusterVersion';
           err.statusCode = 4010;
           return next(err);
