@@ -32,7 +32,7 @@
     "secure"
   ],
   "dependencies": {
-    "minimist": "1.2.0",
+    "minimist": "1.2.3",
     "socketcluster-server": "14.4.0",
     "z-uws": "^0.15.2",
     "hashset": "0.0.6",
