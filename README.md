@@ -1,4 +1,4 @@
-# zation-cluster-state
+# zation-state
 
 The state component of the zation framework.
 
