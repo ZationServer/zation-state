@@ -1,6 +1,6 @@
 {
   "name": "zation-state",
-  "version": "8.0.0-dev.2",
+  "version": "8.0.0-dev.4",
   "license": "SEE LICENSE IN <README.md>",
   "description": "Zation state server for horizontal scalability.",
   "main": "dist/index.js",
