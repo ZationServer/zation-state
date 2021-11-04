@@ -2,8 +2,13 @@
   "name": "zation-state",
   "version": "7.0.0",
   "license": "SEE LICENSE IN <README.md>",
-  "description": "Cluster state tracking and notification engine for Zation clusters.",
-  "main": "index.js",
+  "description": "Zation state server for horizontal scalability.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "!.DS_Store"
+  ],
   "scripts": {
     "build": "gulp build",
     "prepublishOnly": "npm run build",
