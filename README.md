@@ -6,7 +6,7 @@ The state component of the zation framework.
   <!-- Logo -->
   <br/>
   <a href="https://zation.de">
-      <img src="https://zation.de/img/zationWideLogo.svg" alt="Logo Zation" height="200"/>
+      <img src="https://zation.io/img/zationWideLogo.svg" alt="Logo Zation" height="200"/>
   </a>
   <br/>
 </h1>
