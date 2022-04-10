@@ -34,7 +34,7 @@
   ],
   "dependencies": {
     "ziron-state": "3.3.0",
-    "docker-secret": "^1.2.3"
+    "docker-secret": "^1.2.4"
   },
   "devDependencies": {
     "typescript": "^3.7.5",
