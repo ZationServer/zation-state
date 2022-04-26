@@ -12,7 +12,8 @@
     "declaration": true,
     "outDir": "dist",
     "strict": true,
-    "stripInternal": true
+    "stripInternal": true,
+    "resolveJsonModule": true
   },
   "include": [
     "src/**/*"

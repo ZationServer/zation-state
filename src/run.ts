@@ -4,8 +4,9 @@ GitHub: LucaCode
 Copyright(c) Ing. Luca Gian Scaringella
  */
 
-import {StateServer,LogLevel} from "ziron-state";
+import {LogLevel} from "ziron-state";
 import {secrets} from "docker-secret";
+import {StateServer} from "./StateServer";
 
 const variables = Object.assign({}, process.env, secrets);
 
