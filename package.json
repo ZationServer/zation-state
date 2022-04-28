@@ -12,7 +12,7 @@
   "scripts": {
     "build": "gulp build",
     "prepublishOnly": "npm run build",
-    "start": "node dist/run.js"
+    "start": "SECRET=$npm_config_secret node dist/run.js"
   },
   "repository": {
     "type": "git",
