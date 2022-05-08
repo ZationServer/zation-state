@@ -33,7 +33,7 @@
     "secure"
   ],
   "dependencies": {
-    "ziron-state": "7.2.0",
+    "ziron-state": "7.5.0",
     "docker-secret": "^1.2.4",
     "machine-state": "0.5.0",
     "@types/ip": "^1.1.0",
