@@ -4,10 +4,11 @@ GitHub: LucaCode
 Copyright(c) Ing. Luca Gian Scaringella
  */
 
-import {StateServer as ZironStateServer, StateServerOptions} from 'ziron-state';
+import {StateServer as ZironStateServer, StateServerOptions, Block} from 'ziron-state';
 import MachineState from "machine-state";
 import {version as SERVER_VERSION} from './../package.json';
 import * as IP from 'ip';
+import {violatesLicenseTerms} from "./violatesLicenseTerms";
 
 export class StateServer {
 
@@ -18,6 +19,7 @@ export class StateServer {
         this.coreStateServer = new ZironStateServer(options);
         this._initStandaloneStateProcedure();
         this._startResetCounterInterval();
+        this._initWorkerJoinMiddleware();
     }
 
     public async listen() {
@@ -75,5 +77,20 @@ export class StateServer {
             invokeMessageCount: server.invokeMessageCount,
             transmitMessageCount: server.transmitMessageCount
         }
+    }
+
+    private _initWorkerJoinMiddleware() {
+        this.coreStateServer.workerJoinMiddleware = (_, payload) => {
+            const license = payload.license;
+            if(typeof license === 'object') {
+                const currentLicenses: object[] = [];
+                for(const worker of this.coreStateServer.joinedWorkers) {
+                    const workerLicense = worker.node.joinPayload?.license;
+                    if(typeof workerLicense === 'object') currentLicenses.push(workerLicense);
+                }
+                if(violatesLicenseTerms([...currentLicenses,license]))
+                    throw new Block("LicenseTermViolation","Join blocked because of license term violation.");
+            }
+        };
     }
 }
