@@ -9,33 +9,35 @@ import MachineState from "machine-state";
 import {version as SERVER_VERSION} from './../package.json';
 import * as IP from 'ip';
 
-export class StateServer extends ZironStateServer {
+export class StateServer {
 
+    private readonly coreStateServer: ZironStateServer;
     private launchedTimestamp?: number;
 
     constructor(options: StateServerOptions = {}) {
-        super(options);
+        this.coreStateServer = new ZironStateServer(options);
         this._initStandaloneStateProcedure();
         this._startResetCounterInterval();
     }
 
     public async listen() {
-        await super.listen();
+        await this.coreStateServer.listen();
         if(this.launchedTimestamp == null)
             this.launchedTimestamp = Date.now();
     }
 
     private _initStandaloneStateProcedure() {
-        this.procedures['#state'] = async (socket, limitToDynamicInfo, end, reject) => {
+        this.coreStateServer.procedures['#state'] = async (socket, limitToDynamicInfo, end, reject) => {
+            const id = this.coreStateServer.id;
             try {
                 if(limitToDynamicInfo) end({
                     ...(await this.getDynamicServerStateInfo()),
-                    id: this.id
+                    id
                 });
                 else {
                     const [staticInfo,dynamicInfo] = await Promise.all([this.getStaticServerStateInfo(),
                         this.getDynamicServerStateInfo()]);
-                    end({...staticInfo,...dynamicInfo,id: this.id});
+                    end({...staticInfo,...dynamicInfo,id});
                 }
             }
             catch (e) {reject(new Error("Failed to load server state."))}
@@ -44,12 +46,12 @@ export class StateServer extends ZironStateServer {
 
     private _startResetCounterInterval() {
         setInterval( () => {
-            this.server.resetCounts();
+            this.coreStateServer.server.resetCounts();
         },1000);
     }
 
     private async getStaticServerStateInfo() {
-        const server = this.server;
+        const server = this.coreStateServer.server;
         return {
             type: 2,
             port: server.port,
@@ -64,9 +66,9 @@ export class StateServer extends ZironStateServer {
     }
 
     private async getDynamicServerStateInfo() {
-        const server = this.server;
+        const server = this.coreStateServer.server;
         return {
-            clientCount: this.server.clientCount,
+            clientCount: server.clientCount,
             resourceUsage: (await MachineState.getResourceUsageInfo()),
             httpMessageCount: server.httpMessageCount,
             wsMessageCount: server.wsMessageCount,
