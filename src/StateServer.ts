@@ -13,9 +13,11 @@ import {violatesLicenseTerms} from "./violatesLicenseTerms";
 export class StateServer extends ZironStateServer {
 
     private launchedTimestamp?: number;
+    private readonly _staticServerStateInformation: Promise<object>;
 
     constructor(options: StateServerOptions = {}) {
         super(options);
+        this._staticServerStateInformation = this.getStaticServerStateInfo();
         this._initStandaloneStateProcedure();
         this._startResetCounterInterval();
         this._initWorkerJoinMiddleware();
@@ -31,12 +33,12 @@ export class StateServer extends ZironStateServer {
         this.procedures['#state'] = async (socket, limitToDynamicInfo, end, reject) => {
             try {
                 if(limitToDynamicInfo) end({
-                    ...(await this.getDynamicServerStateInfo()),
+                    ...(await this.getDynamicServerStateInfoCached()),
                     id: this.id
                 });
                 else {
-                    const [staticInfo,dynamicInfo] = await Promise.all([this.getStaticServerStateInfo(),
-                        this.getDynamicServerStateInfo()]);
+                    const [staticInfo,dynamicInfo] = await Promise.all([this._staticServerStateInformation,
+                        this.getDynamicServerStateInfoCached()]);
                     end({...staticInfo,...dynamicInfo,id: this.id});
                 }
             }
@@ -58,16 +60,24 @@ export class StateServer extends ZironStateServer {
             path: server.path,
             tls: server.tls,
             nodeVersion: process.version,
-            ip: IP.address(),
             serverVersion: SERVER_VERSION,
             launchedTimestamp: this.launchedTimestamp,
             ...(await MachineState.getGeneralInfo())
         }
     }
 
+    private _dynamicServerInfoPromise: Promise<any> | null = null;
+    private async getDynamicServerStateInfoCached() {
+        if(this._dynamicServerInfoPromise != null) return this._dynamicServerInfoPromise;
+        const result = await (this._dynamicServerInfoPromise = this.getDynamicServerStateInfo());
+        this._dynamicServerInfoPromise = null;
+        return result;
+    }
+
     private async getDynamicServerStateInfo() {
         const server = this.server;
         return {
+            ip: IP.address(),
             clientCount: server.clientCount,
             resourceUsage: (await MachineState.getResourceUsageInfo()),
             httpMessageCount: server.httpMessageCount,
