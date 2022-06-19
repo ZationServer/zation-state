@@ -13,11 +13,9 @@ import {violatesLicenseTerms} from "./violatesLicenseTerms";
 export class StateServer extends ZironStateServer {
 
     private launchedTimestamp?: number;
-    private readonly _staticServerStateInformation: Promise<object>;
 
     constructor(options: StateServerOptions = {}) {
         super(options);
-        this._staticServerStateInformation = this.getStaticServerStateInfo();
         this._initStandaloneStateProcedure();
         this._startResetCounterInterval();
         this._initWorkerJoinMiddleware();
@@ -37,7 +35,7 @@ export class StateServer extends ZironStateServer {
                     id: this.id
                 });
                 else {
-                    const [staticInfo,dynamicInfo] = await Promise.all([this._staticServerStateInformation,
+                    const [staticInfo,dynamicInfo] = await Promise.all([this.getStaticServerStateInfoCached(),
                         this.getDynamicServerStateInfoCached()]);
                     end({...staticInfo,...dynamicInfo,id: this.id});
                 }
@@ -52,6 +50,7 @@ export class StateServer extends ZironStateServer {
         },1000);
     }
 
+    private readonly getStaticServerStateInfoCached = cacheResult(this.getStaticServerStateInfo.bind(this));
     private async getStaticServerStateInfo() {
         const server = this.server;
         return {
