@@ -50,7 +50,7 @@ export class StateServer extends ZironStateServer {
         },1000);
     }
 
-    private readonly getStaticServerStateInfoCached = cacheResult(this.getStaticServerStateInfo.bind(this));
+    private readonly getStaticServerStateInfoCached = memoResult(this.getStaticServerStateInfo.bind(this));
     private async getStaticServerStateInfo() {
         const server = this.server;
         return {
