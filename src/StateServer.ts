@@ -9,6 +9,7 @@ import MachineState from "machine-state";
 import {version as SERVER_VERSION} from './../package.json';
 import * as IP from 'ip';
 import {violatesLicenseTerms} from "./violatesLicenseTerms";
+import {memoResult} from "./utils";
 
 export class StateServer extends ZironStateServer {
 

@@ -4,7 +4,7 @@ GitHub: LucaCode
 Copyright(c) Ing. Luca Gian Scaringella
  */
 
-function memoResult<T extends (...args: any[]) => any>(func: T): T {
+export function memoResult<T extends (...args: any[]) => any>(func: T): T {
     let cache: any | null = null;
     return ((...args) => {
         if(cache != null) return cache;
