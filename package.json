@@ -1,25 +1,26 @@
 {
   "name": "zation-state",
-  "version": "6.0.6",
+  "version": "8.0.0-pre-alpha.1",
   "license": "SEE LICENSE IN <README.md>",
-  "description": "Cluster state tracking and notification engine for Zation clusters.",
-  "main": "index.js",
+  "description": "Zation state server for horizontal scalability.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "!.DS_Store"
+  ],
   "scripts": {
-    "start": "node index.js",
-    "start:docker": "pm2 start index.js && pm2 logs index",
-    "dockerBuild": "docker build -t zation-cluster/state . ",
-    "dockerExport": "docker save --output zation-cluster-state.tar zation-cluster/state",
-    "dockerRun": "docker run --name zation-cluster-state -p7777:7777 zation-cluster/state",
-    "dockerStop": "docker stop zation-cluster-state && docker rm -f zation-cluster-state"
+    "build": "gulp build",
+    "prepublishOnly": "npm run build",
+    "start": "SECRET=$npm_config_secret node dist/run.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ZationServer/zation-cluster-state.git"
+    "url": "https://github.com/ZationServer/zation-state.git"
   },
   "author": {
-    "name": "Luca Scarignella",
-    "email": "lucacode1@gmail.com",
-    "url": "https://luca.scaringella.de"
+    "name": "Ing. Luca Gian Scaringella",
+    "email": "lucacode1@gmail.com"
   },
   "keywords": [
     "cluster",
@@ -32,10 +33,18 @@
     "secure"
   ],
   "dependencies": {
-    "minimist": "1.2.0",
-    "socketcluster-server": "14.4.0",
-    "z-uws": "^0.15.2",
-    "hashset": "0.0.6",
-    "uuid": "3.3.2"
+    "ziron-state": "8.5.0",
+    "docker-secret": "^1.2.4",
+    "machine-state": "0.8.0",
+    "@types/ip": "^1.1.0",
+    "ip": "^1.1.8"
+  },
+  "devDependencies": {
+    "typescript": "^3.7.5",
+    "gulp": "4.0.2",
+    "gulp-optimize-js": "1.1.0",
+    "gulp-terser": "1.2.0",
+    "gulp-typescript": "^5.0.1",
+    "del": "^5.1.0"
   }
 }

@@ -1,18 +1,24 @@
-FROM node:8.9
-
-MAINTAINER Zation
-
-LABEL version="6.0.3"
-LABEL description="Docker file for Zation Cluster State Server"
-
-RUN mkdir -p /usr/src/
-WORKDIR /usr/src/
-COPY . /usr/src/
-
+FROM node:16.13.0-stretch as build
+WORKDIR /usr/app/
+COPY . .
 RUN npm install
+RUN npm run build
 
-RUN npm install pm2 -g
+
+FROM node:16.13.0-slim
+
+LABEL description="Zation state"
+
+WORKDIR /usr/app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY --from=build /usr/app/dist ./dist
+
+HEALTHCHECK --interval=15s --timeout=15s --start-period=10s \
+   CMD node node_modules/ziron-server/dist/healthcheck.js d-7777
 
 EXPOSE 7777
 
-CMD ["npm", "run", "start:docker"]
+CMD npm run start
