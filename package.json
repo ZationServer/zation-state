@@ -37,7 +37,7 @@
     "docker-secret": "^1.2.4",
     "ip": "^1.1.8",
     "machine-state": "0.9.0",
-    "ziron-state": "9.9.4"
+    "ziron-state": "9.10.0"
   },
   "devDependencies": {
     "del": "^5.1.0",
