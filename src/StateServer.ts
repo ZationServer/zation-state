@@ -69,9 +69,8 @@ export class StateServer extends ZironStateServer {
     private _dynamicServerInfoPromise: Promise<any> | null = null;
     private async getDynamicServerStateInfoCached() {
         if(this._dynamicServerInfoPromise != null) return this._dynamicServerInfoPromise;
-        const result = await (this._dynamicServerInfoPromise = this.getDynamicServerStateInfo());
-        this._dynamicServerInfoPromise = null;
-        return result;
+        try {return await (this._dynamicServerInfoPromise = this.getDynamicServerStateInfo());}
+        finally {this._dynamicServerInfoPromise = null;}
     }
 
     private async getDynamicServerStateInfo() {
@@ -88,13 +87,15 @@ export class StateServer extends ZironStateServer {
     }
 
     private _initWorkerJoinMiddleware() {
-        this.workerJoinMiddleware = (_, payload) => {
-            const license = payload.license;
-            if(typeof license === 'object') {
+        this.workerJoinMiddleware = (socket, payload) => {
+            const license = payload?.license;
+            if(license != null && typeof license === 'object') {
                 const currentLicenses: object[] = [];
                 for(const worker of this.joinedWorkers) {
+                    //a rejoining worker (same id) must not count twice
+                    if(worker.node.id === socket.node?.id) continue;
                     const workerLicense = worker.node.joinPayload?.license;
-                    if(typeof workerLicense === 'object') currentLicenses.push(workerLicense);
+                    if(workerLicense != null && typeof workerLicense === 'object') currentLicenses.push(workerLicense);
                 }
                 if(violatesLicenseTerms([...currentLicenses,license]))
                     throw new Block("LicenseTermViolation","Join blocked because of license term violation.");
