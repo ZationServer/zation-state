@@ -33,18 +33,23 @@
     "secure"
   ],
   "dependencies": {
-    "ziron-state": "9.7.0",
-    "docker-secret": "^1.2.4",
-    "machine-state": "0.9.0",
     "@types/ip": "^1.1.0",
-    "ip": "^1.1.8"
+    "docker-secret": "^1.2.4",
+    "ip": "^1.1.8",
+    "machine-state": "0.9.0",
+    "ziron-state": "9.9.4"
   },
   "devDependencies": {
-    "typescript": "^3.7.5",
-    "gulp": "4.0.2",
+    "del": "^5.1.0",
+    "gulp": "^5.0.1",
     "gulp-optimize-js": "1.1.0",
     "gulp-terser": "1.2.0",
     "gulp-typescript": "^5.0.1",
-    "del": "^5.1.0"
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "gulp-typescript": {
+      "source-map": "0.7.4"
+    }
   }
 }
