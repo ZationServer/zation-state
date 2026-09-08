@@ -7,7 +7,7 @@ Copyright(c) Ing. Luca Gian Scaringella
 import {StateServer as ZironStateServer, StateServerOptions, Block} from 'ziron-state';
 import MachineState from "machine-state";
 import {version as SERVER_VERSION} from './../package.json';
-import * as IP from 'ip';
+import {localIpAddress} from './utils';
 import {violatesLicenseTerms} from "./violatesLicenseTerms";
 import {memoResult} from "./utils";
 
@@ -76,7 +76,7 @@ export class StateServer extends ZironStateServer {
     private async getDynamicServerStateInfo() {
         const server = this.server;
         return {
-            ip: IP.address(),
+            ip: localIpAddress(),
             clientCount: server.clientCount,
             resourceUsage: (await MachineState.getResourceUsageInfo()),
             httpMessageCount: server.httpMessageCount,
